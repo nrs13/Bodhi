@@ -1,0 +1,1223 @@
+import nspell from 'nspell'
+import transcriptManager from './transcriptManager.js'
+import { predict } from './wordPredictor.js'
+import { fetchDefinition, fetchDefinitionForSearch } from './definitionFetcher.js'
+
+function isChromeContextValid() {
+  try {
+    // chrome.runtime.id throws after extension reload invalidates the content script
+    return !!chrome.runtime?.id
+  } catch {
+    return false
+  }
+}
+
+let spellChecker = null
+let spellCheckerLoading = false
+let spellCheckerCallbacks = []
+
+let settings = {
+  enabled: true,
+  autoDismiss: true,
+  spellCheck: true,
+  autoEnableCaptions: true,
+}
+
+function applyAutoEnableCaptionsSetting() {
+  if (transcriptManager.setAutoEnableCaptions) {
+    transcriptManager.setAutoEnableCaptions(settings.autoEnableCaptions !== false)
+  }
+}
+
+function loadSettings() {
+  chrome.storage.local.get(
+    ['bodhi_enabled', 'bodhi_autoDismiss', 'bodhi_spellCheck', 'bodhi_autoEnableCaptions', 'bodhi_settings'],
+    (res) => {
+      if (res.bodhi_settings) {
+        settings = { ...settings, ...res.bodhi_settings }
+      }
+      if ('bodhi_enabled' in res) settings.enabled = res.bodhi_enabled
+      if ('bodhi_autoDismiss' in res) settings.autoDismiss = res.bodhi_autoDismiss
+      if ('bodhi_spellCheck' in res) settings.spellCheck = res.bodhi_spellCheck
+      if ('bodhi_autoEnableCaptions' in res) settings.autoEnableCaptions = res.bodhi_autoEnableCaptions
+      applyAutoEnableCaptionsSetting()
+    }
+  );
+}
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (!isChromeContextValid()) return
+  if (changes.bodhi_settings) {
+    settings = { ...settings, ...changes.bodhi_settings.newValue }
+    applyAutoEnableCaptionsSetting()
+  }
+  if (changes.bodhi_autoEnableCaptions) {
+    settings.autoEnableCaptions = changes.bodhi_autoEnableCaptions.newValue
+    applyAutoEnableCaptionsSetting()
+  }
+})
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!isChromeContextValid()) return
+  if (msg.type !== 'BODHI_SETTING') return;
+  switch (msg.key) {
+    case 'enabled':     settings.enabled     = msg.value; break;
+    case 'autoDismiss': settings.autoDismiss = msg.value; break;
+    case 'spellCheck':  settings.spellCheck  = msg.value; break;
+    case 'autoEnableCaptions':
+      settings.autoEnableCaptions = msg.value
+      applyAutoEnableCaptionsSetting()
+      break
+  }
+});
+
+function getVideoId() {
+  try {
+    const url = new URL(window.location.href)
+    return url.searchParams.get('v') || null
+  } catch { return null }
+}
+
+async function saveWordToHistory(entry) {
+  if (!isChromeContextValid()) return
+  const videoId = getVideoId()
+  if (!videoId) return
+
+  return new Promise((resolve) => {
+    const storageKey = `bodhi_history_${videoId}`
+    chrome.storage.local.get([storageKey, 'bodhi_history_index', 'bodhi_session_keys'], (result) => {
+      const existing = result[storageKey] || []
+      const globalIndex = (result.bodhi_history_index || 0) + 1
+      const sessionKeys = result.bodhi_session_keys || []
+
+      const newEntry = {
+        id: globalIndex,
+        word: entry.word,
+        pos: entry.pos || '',
+        definition: entry.definition || '',
+        source: entry.source, // 'hotkey' | 'search'
+        videoId,
+        timestamp: Date.now(),
+      }
+
+      if (existing.length > 0 && existing[0].word === newEntry.word && existing[0].source === newEntry.source) {
+        resolve()
+        return
+      }
+
+      const updated = [newEntry, ...existing].slice(0, 100)
+
+      if (!sessionKeys.includes(storageKey)) sessionKeys.push(storageKey)
+      chrome.storage.local.set({
+        [storageKey]: updated,
+        bodhi_history_index: globalIndex,
+        bodhi_last_word: newEntry,
+        bodhi_session_keys: sessionKeys,
+      }, resolve)
+    })
+  })
+}
+
+async function loadSpellChecker() {
+  if (spellChecker || spellCheckerLoading) return
+  spellCheckerLoading = true
+
+  try {
+    const affUrl = chrome.runtime.getURL('dict/index.aff')
+    const dicUrl = chrome.runtime.getURL('dict/index.dic')
+
+    const [affRes, dicRes] = await Promise.all([fetch(affUrl), fetch(dicUrl)])
+
+    if (!affRes.ok || !dicRes.ok) {
+      console.warn('Bodhi: Failed to load dictionary files')
+      spellCheckerLoading = false
+      return
+    }
+
+    const [aff, dic] = await Promise.all([affRes.text(), dicRes.text()])
+    spellChecker = nspell(aff, dic)
+    spellCheckerLoading = false
+
+    spellCheckerCallbacks.forEach(cb => cb(spellChecker))
+    spellCheckerCallbacks = []
+  } catch (err) {
+    console.warn('Bodhi: Failed to initialize spell checker', err)
+    spellCheckerLoading = false
+  }
+}
+
+function withSpellChecker(cb) {
+  if (spellChecker) { cb(spellChecker); return }
+  spellCheckerCallbacks.push(cb)
+  loadSpellChecker()
+}
+
+function getSuggestions(query, callback) {
+  if (!settings.spellCheck) { callback({ completions: [], corrections: [] }); return }
+  const lower = query.toLowerCase().trim()
+  if (!lower || lower.length < 2) { callback({ completions: [], corrections: [] }); return }
+
+  withSpellChecker(checker => {
+    const raw = checker.suggest(lower)
+    const completions = raw.filter(w => w.toLowerCase().startsWith(lower)).slice(0, 5)
+    const corrections = raw.filter(w => !w.toLowerCase().startsWith(lower)).slice(0, 4)
+    callback({ completions, corrections })
+  })
+}
+
+let widgetInstance = null
+let isProcessing = false
+let autoDismissTimer = null
+
+function resetAutoDismiss(duration) {
+  if (!settings.autoDismiss) return
+  if (autoDismissTimer) clearTimeout(autoDismissTimer)
+  autoDismissTimer = setTimeout(() => {
+    hideWidget()
+  }, duration || 6500)
+}
+let lastTextWindow = null
+
+const MAX_CANDIDATES = 15
+
+const session = {
+  status: 'idle',
+  rankedWords: [],
+  currentIndex: 0,
+}
+
+function clearSession() {
+  session.status = 'idle'
+  session.rankedWords = []
+  session.currentIndex = 0
+  lastTextWindow = null
+}
+
+function startSession(rankedWords) {
+  session.status = 'active'
+  session.rankedWords = rankedWords
+  session.currentIndex = 0
+}
+
+function hasMoreWords() {
+  const next = session.currentIndex + 1
+  return next < MAX_CANDIDATES && next < session.rankedWords.length
+}
+
+const UNAVAILABLE_COPY = {
+  NO_CAPTIONS: {
+    title: 'Captions unavailable',
+    body: 'Enable CC on this video (or pick a video with captions) so Bodhi can listen.',
+    actions: ['search'],
+  },
+  EMPTY_WINDOW: {
+    title: 'Nothing in this moment',
+    body: 'Captions are on, but the last few seconds were quiet or not ready yet. Try again shortly.',
+    actions: ['retry', 'search'],
+  },
+  NO_HARD_WORD: {
+    title: 'All clear',
+    body: 'Nothing tricky in this stretch — keep watching.',
+    actions: ['search'],
+  },
+  LOOKUP_FAILED: {
+    title: "Couldn't fetch a definition",
+    body: 'Network or dictionary issue — not a vocabulary win.',
+    actions: ['retry', 'search'],
+  },
+}
+
+function isMac() { return navigator.platform.toUpperCase().includes('MAC') }
+
+function matchesHotkey(event) {
+  if (event.key.toLowerCase() !== 'b') return false
+  return isMac()
+    ? event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
+    : event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey
+}
+
+function matchesSearchHotkey(event) {
+  if (event.key.toLowerCase() !== 'b') return false
+  return isMac()
+    ? event.metaKey && !event.ctrlKey && event.shiftKey && !event.altKey
+    : event.ctrlKey && !event.metaKey && event.shiftKey && !event.altKey
+}
+
+function handleSearchHotkey() {
+  if (widgetInstance) { hideWidget(); clearSession(); return }
+  showSearchBox('still curious? search it.')
+}
+
+async function findNextWordWithDefinition() {
+  while (true) {
+    const next = session.currentIndex + 1
+    const exhausted = next >= MAX_CANDIDATES || next >= session.rankedWords.length
+    if (exhausted) return null
+    session.currentIndex = next
+    const word = session.rankedWords[session.currentIndex]
+    const result = await fetchDefinition(word.word, lastTextWindow)
+    if (result.definition) return result
+  }
+}
+
+async function loadVideoHistory() {
+  if (!isChromeContextValid()) return []
+  const videoId = getVideoId()
+  if (!videoId) return []
+
+  return new Promise((resolve) => {
+    chrome.storage.local.get([`bodhi_history_${videoId}`], (result) => {
+      resolve(result[`bodhi_history_${videoId}`] || [])
+    })
+  })
+}
+
+function hotkeyIconSvg() {
+  return `<svg width="13" height="11" viewBox="0 0 16 13" fill="none" style="flex-shrink:0;">
+    <rect x="1" y="1" width="14" height="11" rx="2.5"
+      stroke="#C8C8C8" stroke-width="1.1" stroke-dasharray="1.5 2.4"
+      stroke-linecap="round" fill="none"/>
+    <line x1="5.5" y1="6.5" x2="10.5" y2="6.5"
+      stroke="#C8C8C8" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 1.8"/>
+    <line x1="8" y1="4" x2="8" y2="9"
+      stroke="#C8C8C8" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 1.8"/>
+  </svg>`
+}
+
+function searchIconSvg() {
+  return `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;">
+    <circle cx="6" cy="6" r="4.2"
+      stroke="#C8C8C8" stroke-width="1.1" stroke-dasharray="1.5 2.4"
+      stroke-linecap="round" fill="none"/>
+    <line x1="9.3" y1="9.3" x2="12.8" y2="12.8"
+      stroke="#C8C8C8" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="1.2 2"/>
+  </svg>`
+}
+
+function historyClockSvg() {
+  return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="8.5"
+      stroke="#CCCCCC" stroke-width="1.4"
+      stroke-dasharray="2 3" stroke-linecap="round" fill="none"/>
+    <polyline class="bodhi-clock-hands" points="12,8 12,12.5 15,14.8"
+      stroke="#CCCCCC" stroke-width="1.4"
+      stroke-linecap="round" stroke-linejoin="round"
+      stroke-dasharray="1.5 2.2"/>
+  </svg>`
+}
+
+function spinClockHands(btn) {
+  const hands = btn.querySelector('.bodhi-clock-hands')
+  if (!hands) return
+  hands.classList.remove('bodhi-history-hands-spin')
+  void hands.getBoundingClientRect()
+  hands.classList.add('bodhi-history-hands-spin')
+  hands.addEventListener('animationend', () => {
+    hands.classList.remove('bodhi-history-hands-spin')
+  }, { once: true })
+}
+
+function buildSearchBoxHtml() {
+  return `
+    <div class="bodhi-search-wrap">
+      <div class="bodhi-search-row">
+        <input class="bodhi-search-input" type="text" placeholder="type a word..."
+          autocomplete="off" spellcheck="false"/>
+        <button class="bodhi-search-btn" aria-label="Search">
+          <svg class="bodhi-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="7" stroke="#CCCCCC" stroke-width="1.4"
+              stroke-linecap="round" stroke-dasharray="1.8 2.8" fill="none"/>
+            <line x1="16.5" y1="16.5" x2="21" y2="21"
+              stroke="#CCCCCC" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="bodhi-suggestions-panel"></div>
+    </div>
+  `
+}
+
+function attachSearchHandlers(widget) {
+  const input = widget.querySelector('.bodhi-search-input')
+  const searchBtn = widget.querySelector('.bodhi-search-btn')
+  const searchRow = widget.querySelector('.bodhi-search-row')
+  const panel = widget.querySelector('.bodhi-suggestions-panel')
+
+  let activeIdx = -1
+  let allItems = []
+  let debounceTimer = null
+  let typedQuery = ''
+
+  const updateIcon = (hasText) => {
+    const allParts = widget.querySelectorAll('.bodhi-search-icon circle, .bodhi-search-icon line')
+    const color = hasText ? '#111111' : '#CCCCCC'
+    const width = hasText ? '1.8' : '1.4'
+    allParts.forEach(el => { el.setAttribute('stroke', color); el.setAttribute('stroke-width', width) })
+  }
+
+  const resetIdleTimer = () => {
+    if (autoDismissTimer) clearTimeout(autoDismissTimer)
+    if (!settings.autoDismiss) return
+    autoDismissTimer = setTimeout(() => { hideWidget(); clearSession() }, 8000)
+  }
+
+  const hideSuggestions = () => {
+    if (panel) panel.classList.remove('bodhi-suggestions-open')
+    if (searchRow) searchRow.classList.remove('bodhi-search-focused')
+    activeIdx = -1; allItems = []
+  }
+
+  const updateActiveRow = () => {
+    const scrollContainer = panel?.querySelector('.bodhi-suggestions-scroll')
+    panel?.querySelectorAll('.bodhi-suggestion-row').forEach((row, i) => {
+      row.classList.toggle('bodhi-suggestion-active', i === activeIdx)
+      if (i === activeIdx && scrollContainer) {
+        const rowTop = row.offsetTop, rowBottom = rowTop + row.offsetHeight
+        const containerTop = scrollContainer.scrollTop
+        const containerBottom = containerTop + scrollContainer.clientHeight
+        if (rowBottom > containerBottom) scrollContainer.scrollTop = rowBottom - scrollContainer.clientHeight
+        else if (rowTop < containerTop) scrollContainer.scrollTop = rowTop
+      }
+    })
+  }
+
+  const renderSuggestions = (completions, corrections) => {
+    if (!panel) return
+    const merged = [
+      ...completions.map(w => ({ word: w, type: 'completion' })),
+      ...corrections.map(w => ({ word: w, type: 'correction' })),
+    ]
+    allItems = merged
+    if (allItems.length === 0) { hideSuggestions(); return }
+
+    panel.innerHTML = `
+      <div class="bodhi-suggestions-section">
+        <div class="bodhi-suggestions-label">
+          <hr class="bodhi-suggestions-label-line correction"/>
+          <span class="bodhi-suggestions-label-text correction">did you mean?</span>
+          <hr class="bodhi-suggestions-label-line correction"/>
+        </div>
+        <div class="bodhi-suggestions-scroll">
+          ${allItems.map((item, i) => `
+            <button class="bodhi-suggestion-row" data-index="${i}">
+              <svg class="bodhi-suggestion-icon" width="12" height="8" viewBox="0 0 20 12" fill="none" style="flex-shrink:0;">
+                <path d="M2 6 Q5 1 8 6 Q11 11 14 6 Q17 1 20 6" stroke="#BB9999" stroke-width="1.6" stroke-linecap="round" fill="none" stroke-dasharray="1.6 2"/>
+              </svg>
+              <span class="bodhi-suggestion-word-correction">${item.word}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <span class="bodhi-suggestions-hint">↑ ↓ navigate · enter select · esc close</span>
+    `
+    panel.classList.add('bodhi-suggestions-open')
+    if (searchRow) searchRow.classList.add('bodhi-search-focused')
+    activeIdx = -1
+
+    panel.querySelectorAll('.bodhi-suggestion-row').forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        resetIdleTimer(); activeIdx = parseInt(row.dataset.index); updateActiveRow()
+      })
+      row.addEventListener('mousedown', e => {
+        resetIdleTimer(); e.preventDefault()
+        const word = allItems[parseInt(row.dataset.index)]?.word
+        if (word && input) { input.value = word; hideSuggestions(); handleSearch() }
+      })
+    })
+  }
+
+  const handleSearch = async () => {
+    const query = input?.value?.trim()
+    if (!query) return
+    hideSuggestions()
+
+    const btn = widget.querySelector('.bodhi-search-btn')
+    if (btn) {
+      btn.style.pointerEvents = 'none'
+      btn.innerHTML = `<svg class="bodhi-dotted-spinner" width="18" height="18" viewBox="0 0 24 24">
+        <circle cx="12" cy="3" r="1.5" fill="#888888" opacity="1"></circle>
+        <circle cx="18.36" cy="5.64" r="1.5" fill="#888888" opacity="0.8"></circle>
+        <circle cx="21" cy="12" r="1.5" fill="#888888" opacity="0.6"></circle>
+        <circle cx="18.36" cy="18.36" r="1.5" fill="#888888" opacity="0.4"></circle>
+        <circle cx="12" cy="21" r="1.5" fill="#888888" opacity="0.2"></circle>
+        <circle cx="5.64" cy="18.36" r="1.5" fill="#888888" opacity="0.1"></circle>
+        <circle cx="3" cy="12" r="1.5" fill="#888888" opacity="0.1"></circle>
+        <circle cx="5.64" cy="5.64" r="1.5" fill="#888888" opacity="0.1"></circle>
+      </svg>`
+    }
+
+    const result = await fetchDefinitionForSearch(query)
+    if (widgetInstance !== widget) return
+
+    const searchIconHtml = `<svg class="bodhi-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="11" cy="11" r="7" stroke="#CCCCCC" stroke-width="1.4"
+        stroke-linecap="round" stroke-dasharray="1.8 2.8" fill="none"/>
+      <line x1="16.5" y1="16.5" x2="21" y2="21"
+        stroke="#CCCCCC" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>`
+
+    if (btn) { btn.style.pointerEvents = 'auto'; btn.innerHTML = searchIconHtml }
+
+    if (result.definition) {
+      await saveWordToHistory({ word: result.word, pos: result.partOfSpeech, definition: result.definition, source: 'search' })
+      showSearchResult(result.word, result.partOfSpeech, result.definition)
+      resetIdleTimer()
+    } else {
+      if (btn) { btn.innerHTML = searchIconHtml; btn.style.pointerEvents = 'auto' }
+      if (input) { input.value = ''; input.placeholder = 'nothing found, try again...' }
+      resetIdleTimer()
+    }
+  }
+
+  resetIdleTimer()
+
+  if (input) {
+    input.addEventListener('input', () => {
+      const val = input.value; typedQuery = val
+      updateIcon(val.trim().length > 0); resetIdleTimer()
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        if (val.trim().length < 2) { hideSuggestions(); return }
+        getSuggestions(val, ({ completions, corrections }) => {
+          if (completions.length === 0 && corrections.length === 0) hideSuggestions()
+          else renderSuggestions(completions, corrections)
+        })
+      }, 150)
+    })
+
+    input.addEventListener('focus', () => {
+      resetIdleTimer()
+      if (searchRow) searchRow.classList.add('bodhi-search-focused')
+      if (input.value.trim().length >= 2) {
+        getSuggestions(input.value, ({ completions, corrections }) => {
+          if (completions.length > 0 || corrections.length > 0) renderSuggestions(completions, corrections)
+        })
+      }
+    })
+
+    input.addEventListener('blur', () => {
+      if (searchRow) searchRow.classList.remove('bodhi-search-focused')
+      setTimeout(hideSuggestions, 300)
+    })
+
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation(); resetIdleTimer()
+      if (e.key === 'Enter') { e.preventDefault(); handleSearch() }
+      else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (allItems.length > 0) {
+          activeIdx = Math.min(activeIdx + 1, allItems.length - 1)
+          updateActiveRow(); if (input) input.value = allItems[activeIdx].word
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); activeIdx = Math.max(activeIdx - 1, -1); updateActiveRow()
+        if (input) input.value = activeIdx >= 0 ? allItems[activeIdx].word : typedQuery
+      } else if (e.key === 'Tab' && allItems.length > 0) {
+        e.preventDefault()
+        const word = allItems[activeIdx >= 0 ? activeIdx : 0]?.word
+        if (word && input) { input.value = word; hideSuggestions() }
+      } else if (e.key === 'Escape') {
+        if (input) input.value = typedQuery; hideSuggestions()
+      }
+    })
+
+    setTimeout(() => { if (input) input.focus() }, 50)
+  }
+
+  if (searchBtn) searchBtn.addEventListener('click', () => { resetIdleTimer(); handleSearch() })
+}
+
+function dotsRow(count, offsetIndex) {
+  return `<div class="bodhi-skeleton-row">
+    ${Array.from({ length: count }).map((_, i) =>
+      `<div class="bodhi-skeleton-dot" style="animation-delay:${((offsetIndex * 4) + i) * 0.07}s"></div>`
+    ).join('')}
+  </div>`
+}
+
+function buildHistoryView(history, currentWordId) {
+  const entries = history
+
+  if (entries.length === 0) {
+    return `<div class="bodhi-history-empty">no lookups yet this video</div>`
+  }
+
+  return entries.map(entry => {
+    const isCurrent = entry.id === currentWordId
+    const icon = entry.source === 'hotkey' ? hotkeyIconSvg() : searchIconSvg()
+    const currentDot = isCurrent ? `<svg width="6" height="6" viewBox="0 0 6 6" fill="none" style="flex-shrink:0;">
+      <circle cx="3" cy="3" r="2" stroke="#BBBBBB" stroke-width="1"
+        stroke-dasharray="1.2 1.4" stroke-linecap="round" fill="none"/>
+    </svg>` : ''
+
+    return `<div class="bodhi-history-entry ${isCurrent ? 'is-current' : ''}"
+      data-word="${entry.word}" data-pos="${entry.pos || ''}"
+      data-def="${encodeURIComponent(entry.definition || '')}"
+      title="${entry.source === 'hotkey' ? 'Looked up via ⌘B' : 'Looked up via search box'}">
+      ${icon}
+      <span class="bodhi-history-word ${isCurrent ? 'is-current' : ''}">${entry.word}</span>
+      ${entry.pos ? `<span class="bodhi-history-pos">${entry.pos}</span>` : ''}
+      ${currentDot}
+    </div>`
+  }).join('')
+}
+
+const MOTION_FAST_MS = 160
+const MOTION_BASE_MS = 200
+
+function mountWidget(widget) {
+  widget.classList.add('bodhi-widget-enter')
+  document.body.appendChild(widget)
+  widgetInstance = widget
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      widget.classList.add('bodhi-widget-enter-active')
+      widget.classList.remove('bodhi-widget-enter')
+      setTimeout(() => {
+        widget.classList.remove('bodhi-widget-enter-active')
+      }, MOTION_BASE_MS)
+    })
+  })
+}
+
+function swapInnerViews(fromEl, toEl) {
+  if (!fromEl || !toEl) return
+  fromEl.classList.add('is-fading')
+  setTimeout(() => {
+    fromEl.classList.add('is-hidden')
+    fromEl.classList.remove('is-fading')
+    toEl.classList.remove('is-hidden')
+    toEl.classList.add('is-fading')
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        toEl.classList.remove('is-fading')
+      })
+    })
+  }, MOTION_FAST_MS)
+}
+
+async function showSkeleton() {
+  if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+  await hideWidget()
+  const widget = document.createElement('div')
+  widget.className = 'bodhi-widget'
+  const position = getStoredPosition() || getDefaultPosition()
+  widget.style.top = position.top + 'px'
+  widget.style.left = position.left + 'px'
+
+  widget.innerHTML = `
+    <button class="bodhi-close" aria-label="Close Bodhi">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="bodhi-panel">
+      <div class="bodhi-skeleton" style="padding-right:16px; padding-top:4px;">
+        ${dotsRow(10, 0)}
+        ${dotsRow(5, 1)}
+        ${dotsRow(14, 2)}
+        ${dotsRow(11, 3)}
+        ${dotsRow(8, 4)}
+      </div>
+    </div>
+  `
+
+  const closeBtn = widget.querySelector('.bodhi-close')
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => { hideWidget(); clearSession() })
+  }
+
+  makeDraggable(widget)
+  mountWidget(widget)
+}
+
+async function showSearchResult(word, partOfSpeech, definition) {
+  await hideWidget()
+  const widget = document.createElement('div')
+  widget.className = 'bodhi-widget'
+  const position = getStoredPosition() || getDefaultPosition()
+  widget.style.top = position.top + 'px'
+  widget.style.left = position.left + 'px'
+
+  widget.innerHTML = `
+    <button class="bodhi-close" aria-label="Close Bodhi">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="bodhi-panel" style="padding-right: 16px;">
+      <div class="bodhi-word"><span>${word}</span></div>
+      ${partOfSpeech ? `<div class="bodhi-pos">${partOfSpeech}</div>` : ''}
+      <div class="bodhi-definition">${definition}</div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0;text-align:center;">
+        <button class="bodhi-search-link" data-action="search-another">search another →</button>
+      </div>
+    </div>
+  `
+
+  const closeBtn = widget.querySelector('.bodhi-close')
+  if (closeBtn) closeBtn.addEventListener('click', () => { hideWidget(); clearSession() })
+
+  const searchLink = widget.querySelector('[data-action="search-another"]')
+  if (searchLink) searchLink.addEventListener('click', () => showSearchBox('still curious? search it.'))
+
+  makeDraggable(widget)
+  mountWidget(widget)
+}
+
+async function showSearchBox(message) {
+  session.status = 'search'
+  await hideWidget()
+  const widget = document.createElement('div')
+  widget.className = 'bodhi-widget bodhi-search-expanded'
+  const position = getStoredPosition() || getDefaultPosition()
+  widget.style.top = position.top + 'px'
+  widget.style.left = position.left + 'px'
+
+  widget.innerHTML = `
+    <button class="bodhi-close" aria-label="Close Bodhi">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="bodhi-panel" style="padding-top: 8px;">
+      <p class="bodhi-search-hint">${message}</p>
+      ${buildSearchBoxHtml()}
+    </div>
+  `
+
+  const closeBtn = widget.querySelector('.bodhi-close')
+  if (closeBtn) closeBtn.addEventListener('click', () => { hideWidget(); clearSession() })
+
+  attachSearchHandlers(widget)
+  makeDraggable(widget)
+  mountWidget(widget)
+}
+
+function buildUnavailableActions(actions) {
+  const parts = []
+  if (actions.includes('retry')) {
+    parts.push(`<button class="bodhi-search-link" data-action="retry-hotkey"
+      style="width:auto !important; padding:4px 0 !important; text-align:center !important;">
+      try again
+    </button>`)
+  }
+  if (actions.includes('search')) {
+    parts.push(`<button class="bodhi-search-link" data-action="open-search"
+      style="width:auto !important; padding:4px 0 !important; text-align:center !important;">
+      search a word →
+    </button>`)
+  }
+  return parts.join('')
+}
+
+function createWidget(word, partOfSpeech, definition, state, history, currentWordId, reason = null) {
+  const widget = document.createElement('div')
+  widget.className = 'bodhi-widget'
+  const position = getStoredPosition() || getDefaultPosition()
+  widget.style.top = position.top + 'px'
+  widget.style.left = position.left + 'px'
+
+  const showHistoryBtn = history && history.length > 0 && state !== 'skeleton'
+
+  const closeBtnHtml = `
+    <button class="bodhi-close" aria-label="Close Bodhi">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  `
+
+  const historyBtnHtml = showHistoryBtn ? `
+    <button class="bodhi-history-btn" data-action="open-history" title="Session history" aria-label="Session history">
+      ${historyClockSvg()}
+    </button>
+  ` : ''
+
+  const nextBtnHtml = `
+    <button class="bodhi-thumb" data-feedback="next" aria-label="Next word" style="padding:4px !important;">
+      <svg class="bodhi-next-icon" width="26" height="26" viewBox="0 0 24 24" fill="none"
+        style="transition:transform 0.5s ease;display:block;">
+        <path d="M 21 12 A 9 9 0 1 1 17 4.5"
+          stroke="#CCCCCC" stroke-width="1.5"
+          stroke-linecap="round" stroke-dasharray="2 2.8" fill="none"/>
+        <polyline points="14,2 17.2,4.6 14.8,7.8"
+          stroke="#CCCCCC" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"
+          stroke-dasharray="1.6 2.4" fill="none"/>
+      </svg>
+    </button>
+  `
+
+  let content = ''
+
+  if (state === 'unavailable') {
+    const copy = UNAVAILABLE_COPY[reason] || UNAVAILABLE_COPY.LOOKUP_FAILED
+    content = `
+      ${closeBtnHtml}${historyBtnHtml}
+      <div class="bodhi-unavailable" data-reason="${reason || ''}" style="padding-top:8px;padding-right:48px;">
+        <p class="bodhi-unavailable-title">${copy.title}</p>
+        <p class="bodhi-unavailable-body">
+          ${copy.body}
+        </p>
+        <div class="bodhi-unavail-actions" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          ${buildUnavailableActions(copy.actions)}
+        </div>
+      </div>
+    `
+  } else {
+    content = `
+      ${closeBtnHtml}${historyBtnHtml}
+      <div style="padding-right:16px;">
+        <div class="bodhi-word">
+          <span class="bodhi-selectable">${word}</span>
+        </div>
+        ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
+        <div class="bodhi-definition bodhi-selectable">
+          ${definition}
+        </div>
+      </div>
+      <div class="bodhi-feedback">
+        <svg class="bodhi-divider" height="10" viewBox="0 0 240 10"
+          xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <line x1="0" y1="5" x2="240" y2="5"
+            stroke="#E8E8E8" stroke-width="1.8"
+            stroke-linecap="round" stroke-dasharray="2 5.5"/>
+        </svg>
+        <div class="bodhi-action-row">
+          ${hasMoreWords() ? `${nextBtnHtml}` : `<button class="bodhi-search-link" data-action="open-search" style="flex:1 !important;text-align:center !important;">search a word →</button>`}
+        </div>
+      </div>
+    `
+  }
+
+  const historyViewHtml = `
+    <div class="bodhi-history-view is-hidden">
+      <button class="bodhi-back" aria-label="Back">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <polyline points="15,6 9,12 15,18"
+            stroke="#111111" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round"
+            stroke-dasharray="2 2.5"/>
+        </svg>
+      </button>
+      <button class="bodhi-close" aria-label="Close Bodhi">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div class="bodhi-history-title">session history</div>
+      <svg style="width:100%;display:block;" height="10" viewBox="0 0 240 10" preserveAspectRatio="none">
+        <line x1="0" y1="5" x2="240" y2="5"
+          stroke="#E8E8E8" stroke-width="1.8"
+          stroke-linecap="round" stroke-dasharray="2 5.5"/>
+      </svg>
+      <div class="bodhi-history-list">
+        ${buildHistoryView(history || [], currentWordId)}
+      </div>
+    </div>
+  `
+
+  const wrapper = document.createElement('div')
+  wrapper.innerHTML = `<div class="bodhi-main-view">${content}</div>${historyViewHtml}`
+  while (wrapper.firstChild) widget.appendChild(wrapper.firstChild)
+
+  widget.querySelectorAll('.bodhi-close').forEach(btn => {
+    btn.addEventListener('click', () => { hideWidget(); clearSession() })
+    btn.addEventListener('mouseenter', () => { btn.style.opacity = '1' })
+    btn.addEventListener('mouseleave', () => { btn.style.opacity = '0.6' })
+  })
+
+  const backBtn = widget.querySelector('.bodhi-back')
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      swapInnerViews(
+        widget.querySelector('.bodhi-history-view'),
+        widget.querySelector('.bodhi-main-view'),
+      )
+    })
+    backBtn.addEventListener('mouseenter', () => { backBtn.style.opacity = '1' })
+    backBtn.addEventListener('mouseleave', () => { backBtn.style.opacity = '0.55' })
+  }
+
+  const historyBtn = widget.querySelector('[data-action="open-history"]')
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      spinClockHands(historyBtn)
+      swapInnerViews(
+        widget.querySelector('.bodhi-main-view'),
+        widget.querySelector('.bodhi-history-view'),
+      )
+    })
+  }
+
+  widget.querySelectorAll('.bodhi-history-entry').forEach(entry => {
+    entry.addEventListener('click', () => {
+      if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+      if (settings.autoDismiss) {
+        autoDismissTimer = setTimeout(() => { if (widgetInstance === widget) hideWidget() }, 6500)
+      }
+      const w = entry.dataset.word
+      const p = entry.dataset.pos
+      const d = decodeURIComponent(entry.dataset.def)
+      if (w && d) {
+        const wordEl = widget.querySelector('.bodhi-selectable')
+        const posEl = widget.querySelector('.bodhi-pos')
+        const defEl = widget.querySelector('.bodhi-definition')
+        if (wordEl) wordEl.textContent = w
+        if (posEl) posEl.textContent = p
+        if (defEl) defEl.textContent = d
+        swapInnerViews(
+          widget.querySelector('.bodhi-history-view'),
+          widget.querySelector('.bodhi-main-view'),
+        )
+      }
+    })
+    entry.addEventListener('mouseenter', () => { entry.style.background = '#F5F5F5' })
+    entry.addEventListener('mouseleave', () => { entry.style.background = 'transparent' })
+  })
+
+  const historyList = widget.querySelector('.bodhi-history-list')
+  if (historyList) {
+    let activeHistoryIdx = -1
+    const getEntries = () => Array.from(historyList.querySelectorAll('.bodhi-history-entry'))
+
+    historyList.addEventListener('keydown', (e) => {
+      const entries = getEntries()
+      if (!entries.length) return
+      if (e.key === 'ArrowDown') {
+        e.preventDefault(); e.stopPropagation()
+        activeHistoryIdx = Math.min(activeHistoryIdx + 1, entries.length - 1)
+        entries.forEach((el, i) => el.style.background = i === activeHistoryIdx ? '#F5F5F5' : '')
+        entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); e.stopPropagation()
+        activeHistoryIdx = Math.max(activeHistoryIdx - 1, 0)
+        entries.forEach((el, i) => el.style.background = i === activeHistoryIdx ? '#F5F5F5' : '')
+        entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'Enter' && activeHistoryIdx >= 0) {
+        e.preventDefault(); e.stopPropagation()
+        entries[activeHistoryIdx]?.click()
+      }
+    })
+
+    historyList.setAttribute('tabindex', '0')
+    const historyBtn = widget.querySelector('[data-action="open-history"]')
+    if (historyBtn) {
+      historyBtn.addEventListener('click', () => {
+        setTimeout(() => { historyList.focus() }, 50)
+      })
+    }
+  }
+
+  const nextBtn = widget.querySelector('[data-feedback="next"]')
+  if (nextBtn) {
+    nextBtn.addEventListener('click', async () => {
+      if (nextBtn.dataset.spinning === 'true') return
+      nextBtn.dataset.spinning = 'true'
+      if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+
+      const svg = nextBtn.querySelector('svg')
+      if (svg) {
+        svg.style.transition = 'none'; svg.style.transform = 'rotate(0deg)'
+        svg.getBoundingClientRect()
+        svg.style.transition = 'transform 0.5s ease'; svg.style.transform = 'rotate(360deg)'
+        svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', '#111111'))
+        setTimeout(() => {
+          svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', '#CCCCCC'))
+          nextBtn.dataset.spinning = 'false'
+        }, 520)
+      }
+
+      const result = await findNextWordWithDefinition()
+      if (result) {
+        await saveWordToHistory({ word: result.word, pos: result.partOfSpeech, definition: result.definition, source: 'hotkey' })
+        const updatedHistory = await loadVideoHistory()
+        showWidget(result.word, result.partOfSpeech, result.definition, 'success', updatedHistory)
+      } else {
+        showSearchBox('still curious? search it.')
+      }
+    })
+    nextBtn.addEventListener('mouseenter', () => { nextBtn.style.backgroundColor = '#f8f9fa' })
+    nextBtn.addEventListener('mouseleave', () => { nextBtn.style.backgroundColor = 'transparent' })
+  }
+
+  widget.querySelectorAll('[data-action="open-search"]').forEach((searchLink) => {
+    searchLink.addEventListener('click', () => showSearchBox('still curious? search it.'))
+  })
+  widget.querySelectorAll('[data-action="retry-hotkey"]').forEach((retryBtn) => {
+    retryBtn.addEventListener('click', () => {
+      hideWidget()
+      clearSession()
+      handleHotkey()
+    })
+  })
+
+  makeDraggable(widget)
+  
+  widget.addEventListener('mouseenter', () => {
+    if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+  })
+  widget.addEventListener('mouseleave', () => {
+    if (!settings.autoDismiss) return
+    const duration = widget.querySelector('.bodhi-search-row') ? 8000 : 6500
+    autoDismissTimer = setTimeout(() => {
+      if (widgetInstance === widget) hideWidget()
+    }, duration)
+  })
+  
+  return widget
+}
+
+async function showWidget(word, partOfSpeech, definition, widgetState, history = [], currentWordId = null, reason = null) {
+  if (!settings.enabled) return;
+
+  if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+  await hideWidget()
+  const widget = createWidget(word, partOfSpeech, definition, widgetState, history, currentWordId, reason)
+  mountWidget(widget)
+
+  if (settings.autoDismiss) {
+    const capturedInstance = widgetInstance
+    requestAnimationFrame(() => {
+      const duration = widgetState === 'success'
+        ? 6500
+        : widgetState === 'unavailable'
+          ? 10000
+          : 6000;
+      autoDismissTimer = setTimeout(() => {
+        if (widgetInstance === capturedInstance) hideWidget();
+      }, duration);
+    });
+  }
+}
+
+function hideWidget() {
+  return new Promise((resolve) => {
+    if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+    const el = widgetInstance
+    if (!el) {
+      resolve()
+      return
+    }
+    widgetInstance = null
+    el.classList.add('bodhi-widget-exit')
+    setTimeout(() => {
+      el.remove()
+      resolve()
+    }, MOTION_FAST_MS)
+  })
+}
+
+async function handleHotkey() {
+  if (!isChromeContextValid()) return
+  if (!settings.enabled) return
+  if (isProcessing) return
+  isProcessing = true
+
+  try {
+    if (widgetInstance) { await hideWidget(); clearSession(); return }
+    clearSession()
+
+    if (!transcriptManager.isReady()) await transcriptManager.waitUntilReady()
+
+    const status = transcriptManager.getStatus
+      ? transcriptManager.getStatus()
+      : { mode: transcriptManager.getMode(), ready: transcriptManager.isReady() }
+    const mode = status.mode
+
+    if (mode === 'unavailable') {
+      const history = await loadVideoHistory()
+      showWidget('', '', '', 'unavailable', history, null, 'NO_CAPTIONS')
+      return
+    }
+
+    const snap = transcriptManager.getSnapshot
+      ? transcriptManager.getSnapshot()
+      : null
+    const video = document.querySelector('video')
+    const currentTime = snap?.t ?? (video ? video.currentTime : 0)
+    const textWindow = snap?.text ?? transcriptManager.getTextWindow(currentTime)
+    if (!textWindow) {
+      const history = await loadVideoHistory()
+      showWidget('', '', '', 'unavailable', history, null, 'EMPTY_WINDOW')
+      return
+    }
+
+    const phrases = snap?.phrases?.length
+      ? snap.phrases
+      : (transcriptManager.getPhrasesInWindow
+        ? transcriptManager.getPhrasesInWindow(currentTime - 3, currentTime)
+        : [])
+    lastTextWindow = textWindow
+
+    const prediction = await predict(textWindow, phrases, currentTime)
+    if (!prediction || prediction.length === 0) {
+      const history = await loadVideoHistory()
+      showWidget('', '', '', 'unavailable', history, null, 'NO_HARD_WORD')
+      return
+    }
+
+    startSession(prediction)
+    await showSkeleton()
+
+    let result = null
+    while (session.currentIndex < Math.min(MAX_CANDIDATES, session.rankedWords.length)) {
+      const word = session.rankedWords[session.currentIndex]
+      result = await fetchDefinition(word.word, lastTextWindow)
+      if (result.definition) break
+      session.currentIndex++
+      result = null
+    }
+
+    if (!result || !result.definition) {
+      const history = await loadVideoHistory()
+      showWidget('', '', '', 'unavailable', history, null, 'LOOKUP_FAILED')
+      clearSession(); return
+    }
+
+    await saveWordToHistory({ word: result.word, pos: result.partOfSpeech, definition: result.definition, source: 'hotkey' })
+    const history = await loadVideoHistory()
+    const currentWordId = history.length > 0 ? history[0].id : null
+
+    showWidget(result.word, result.partOfSpeech, result.definition, 'success', history, currentWordId)
+
+  } catch (err) {
+    console.error('Bodhi error:', err)
+    const history = await loadVideoHistory()
+    showWidget('', '', '', 'unavailable', history, null, 'LOOKUP_FAILED')
+    clearSession()
+  } finally {
+    isProcessing = false
+  }
+}
+
+function handleKeydown(e) {
+  if (matchesSearchHotkey(e)) {
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation()
+    handleSearchHotkey(); return
+  }
+  if (!matchesHotkey(e)) return
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation()
+  handleHotkey()
+}
+
+function addDragOverlay(element) {
+  removeDragOverlay(element)
+  const w = element.offsetWidth, h = element.offsetHeight
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.classList.add('bodhi-drag-overlay')
+  svg.setAttribute('width', w); svg.setAttribute('height', h)
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+  rect.setAttribute('x', '1.5'); rect.setAttribute('y', '1.5')
+  rect.setAttribute('width', w - 3); rect.setAttribute('height', h - 3)
+  rect.setAttribute('rx', '14.5'); rect.setAttribute('ry', '14.5')
+  rect.setAttribute('fill', 'none'); rect.setAttribute('stroke', '#CCCCCC')
+  rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('stroke-dasharray', '2 4.5')
+  rect.setAttribute('stroke-linecap', 'round')
+  svg.appendChild(rect); element.appendChild(svg)
+}
+
+function removeDragOverlay(element) {
+  const existing = element.querySelector('.bodhi-drag-overlay')
+  if (existing) existing.remove()
+}
+
+function makeDraggable(element) {
+  let isDragging = false, startX, startY, initialLeft, initialTop
+
+  element.addEventListener('mousedown', (e) => {
+    if (
+      e.target.closest('.bodhi-close') || e.target.closest('.bodhi-back') ||
+      e.target.closest('.bodhi-thumb') || e.target.closest('.bodhi-history-btn') ||
+      e.target.closest('.bodhi-search-row') || e.target.closest('.bodhi-search-link') ||
+      e.target.closest('.bodhi-suggestions-scroll') || e.target.closest('.bodhi-history-list')
+    ) return
+
+    isDragging = true
+    startX = e.clientX; startY = e.clientY
+    initialLeft = element.offsetLeft; initialTop = element.offsetTop
+
+    if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+
+    element.classList.add('bodhi-widget-dragging')
+    element.style.cursor = 'grabbing'
+    element.style.willChange = 'transform'
+    addDragOverlay(element)
+
+    document.addEventListener('mousemove', drag)
+    document.addEventListener('mouseup', stopDrag)
+    e.preventDefault()
+  })
+
+  const drag = (e) => {
+    if (!isDragging) return
+    const padding = 8
+    const newLeft = Math.max(padding, Math.min(initialLeft + e.clientX - startX, window.innerWidth - element.offsetWidth - padding))
+    const newTop = Math.max(padding, Math.min(initialTop + e.clientY - startY, window.innerHeight - element.offsetHeight - padding))
+    element.style.left = newLeft + 'px'; element.style.top = newTop + 'px'
+  }
+
+  const stopDrag = () => {
+    if (!isDragging) return
+    isDragging = false
+    element.classList.remove('bodhi-widget-dragging')
+    element.style.cursor = 'grab'
+    removeDragOverlay(element)
+    element.style.willChange = ''; element.style.boxShadow = ''; element.style.transform = ''
+    storePosition(element.offsetLeft, element.offsetTop)
+    document.removeEventListener('mousemove', drag)
+    document.removeEventListener('mouseup', stopDrag)
+
+    if (!settings.autoDismiss) return
+
+    const capturedInstance = widgetInstance
+    requestAnimationFrame(() => {
+      if (capturedInstance && capturedInstance.querySelector('.bodhi-skeleton')) return
+      const duration = capturedInstance && capturedInstance.querySelector('.bodhi-search-row') ? 8000 : 6000
+      autoDismissTimer = setTimeout(() => {
+        if (widgetInstance === capturedInstance) { hideWidget(); clearSession() }
+      }, duration)
+    })
+  }
+
+  element.style.cursor = 'grab'
+}
+
+function getStoredPosition() {
+  try { return JSON.parse(localStorage.getItem('bodhi_position')) } catch { return null }
+}
+function storePosition(left, top) {
+  try { localStorage.setItem('bodhi_position', JSON.stringify({ left, top })) } catch {}
+}
+function getDefaultPosition() {
+  return {
+    left: Math.max(16, (window.innerWidth - 280) / 2),
+    top: Math.max(16, window.innerHeight - 200 - 80)
+  }
+}
+
+function onVideoChange() { hideWidget(); clearSession() }
+
+function init() {
+  loadSettings()
+  loadSpellChecker()
+  document.addEventListener('keydown', handleKeydown, true)
+  transcriptManager.init()
+
+  const titleEl = document.querySelector('title')
+  if (titleEl) {
+    new MutationObserver(() => onVideoChange()).observe(titleEl, { childList: true })
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init)
+} else {
+  init()
+}

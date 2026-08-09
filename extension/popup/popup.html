@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodhi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
+  <style>
+    @keyframes bodhi-dash-orbit {
+      from { stroke-dashoffset: 0; }
+      to   { stroke-dashoffset: -44; }
+    }
+    @keyframes bodhi-scanner {
+      0%   { transform: translateX(0px);  opacity: 0; }
+      6%   { opacity: 1; }
+      94%  { opacity: 1; }
+      100% { transform: translateX(72px); opacity: 0; }
+    }
+    @keyframes bodhi-fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bodhi-empty-float {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-3px); }
+    }
+    @keyframes bodhi-ccw-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(-360deg); }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      --bodhi-ink-primary: #111111;
+      --bodhi-ink-body: #333333;
+      --bodhi-ink-secondary: #555555;
+      --bodhi-ink-muted: #666666;
+      --bodhi-ink-disabled: #999999;
+      width: 340px;
+      height: 580px;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Doto', monospace;
+      -webkit-font-smoothing: antialiased;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      color: var(--bodhi-ink-body);
+    }
+    body.mounted {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .header {
+      padding: 22px 22px 18px;
+      background: #FAFAFA;
+      border-bottom: 1px solid #F0F0F0;
+      position: relative;
+      overflow: hidden;
+    }
+    .header-bg-dots {
+      position: absolute;
+      top: 0; right: 0;
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .header-inner {
+      display: flex;
+      align-items: flex-start;
+      position: relative;
+    }
+    .header-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-wordmark {
+      font-size: 26px;
+      color: var(--bodhi-ink-primary);
+      letter-spacing: 0.08em;
+      line-height: 1;
+    }
+    .header-tagline {
+      font-size: 11px;
+      color: var(--bodhi-ink-muted);
+      margin: 5px 0 0 32px;
+      letter-spacing: 0.06em;
+    }
+    .body {
+      padding: 18px 22px 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0 0 10px 0;
+      cursor: pointer;
+      font-family: 'Doto', monospace;
+    }
+    .section-header hr {
+      flex: 1; border: none;
+      border-top: 1px dashed #EEEEEE; margin: 0;
+    }
+    .section-header .section-title {
+      font-size: 10px; color: var(--bodhi-ink-secondary);
+      letter-spacing: 0.12em; white-space: nowrap;
+      text-transform: uppercase;
+      transition: color 0.15s ease;
+    }
+    .section-header .section-count {
+      font-size: 9px; color: var(--bodhi-ink-muted);
+      transition: color 0.15s ease;
+      margin-left: 5px;
+    }
+    .section-header:hover .section-title { color: var(--bodhi-ink-muted); }
+    .section-header:hover .section-count { color: var(--bodhi-ink-muted); }
+    .section-chevron {
+      flex-shrink: 0;
+      transform: rotate(0deg);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      opacity: 0.3;
+    }
+    .section-chevron.open { transform: rotate(180deg); }
+    .section-header:hover .section-chevron { opacity: 0.6; }
+    .section-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .section-body.open { max-height: 400px; }
+    #recent-body.open {
+      flex: 1;
+      min-height: 0;
+      max-height: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .shortcuts-section { margin-bottom: 18px; flex-shrink: 0; }
+    .shortcuts-list { display: flex; flex-direction: column; gap: 7px; padding-bottom: 2px; }
+    .shortcut-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px; border-radius: 10px;
+      background: #FAFAFA; border: 1px solid #F0F0F0;
+    }
+    .shortcut-label { font-size: 13px; color: var(--bodhi-ink-body); letter-spacing: 0.03em; }
+    .shortcut-keys { display: flex; align-items: center; gap: 3px; }
+    .key {
+      font-family: 'Doto', monospace;
+      font-size: 11px; color: var(--bodhi-ink-secondary);
+      background: #F5F5F5; border: 1px solid #DDDDDD;
+      border-radius: 6px; padding: 2px 7px;
+      letter-spacing: 0.04em; white-space: nowrap;
+      box-shadow: 0 1px 0 #D0D0D0;
+    }
+    .recent-section { margin-bottom: 18px; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+    .lookup-list-wrap {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      scrollbar-width: none;
+      border: 1px solid #F4F4F4;
+      border-radius: 12px;
+    }
+    .lookup-list-wrap::-webkit-scrollbar { display: none; }
+    .lookup-list { display: flex; flex-direction: column; }
+
+    .lookup-item {
+      display: flex; flex-direction: column;
+      background: transparent;
+      border: none; padding: 0;
+      cursor: pointer; text-align: left;
+      font-family: 'Doto', monospace;
+      width: 100%;
+    }
+    .lookup-item-inner {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-left: 2px solid transparent;
+      background: #FFFFFF;
+      transition: background 0.12s ease, border-left-color 0.12s ease;
+    }
+    .lookup-item.active .lookup-item-inner,
+    .lookup-item:hover .lookup-item-inner {
+      background: #F8F8F8;
+      border-left-color: #D8D8D8;
+    }
+    .lookup-item-left { display: flex; align-items: center; gap: 10px; }
+    .lookup-word {
+      font-size: 13px; color: var(--bodhi-ink-primary); letter-spacing: 0.03em;
+      transition: color 0.12s ease;
+    }
+    .lookup-item.active .lookup-word,
+    .lookup-item:hover .lookup-word { color: var(--bodhi-ink-primary); }
+    .lookup-right { display: flex; align-items: center; gap: 6px; }
+    .lookup-pos { font-size: 10px; color: var(--bodhi-ink-muted); font-style: italic; letter-spacing: 0.03em; }
+    .lookup-chevron {
+      transition: transform 0.2s ease;
+      opacity: 0.2;
+    }
+    .lookup-item.active .lookup-chevron,
+    .lookup-item:hover .lookup-chevron { opacity: 0.5; }
+    .lookup-chevron.open { transform: rotate(180deg); }
+
+    .lookup-def {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1);
+      padding-left: 36px; padding-right: 12px;
+      background: #FAFAFA;
+    }
+    .lookup-def.open { max-height: 56px; }
+    .lookup-def p {
+      font-size: 11px; color: var(--bodhi-ink-body); line-height: 1.6;
+      margin: 0 0 8px 0; letter-spacing: 0.02em;
+    }
+    .lookup-divider { margin: 0 10px; }
+
+    .lookup-empty {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 18px 0 10px; gap: 6px;
+      animation: bodhi-fade-in 0.35s ease both;
+    }
+    .lookup-empty-icon {
+      font-size: 22px; color: var(--bodhi-ink-muted); line-height: 1;
+      animation: bodhi-empty-float 3s ease-in-out infinite;
+      display: block;
+    }
+    .lookup-empty-line1 { font-size: 12px; color: var(--bodhi-ink-muted); letter-spacing: 0.04em; }
+    .lookup-empty-line2 { font-size: 10px; color: var(--bodhi-ink-muted); letter-spacing: 0.04em; }
+
+    /* Fade gradient */
+    .lookup-fade {
+      height: 16px; margin-top: -16px; position: relative; pointer-events: none;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
+      border-radius: 0 0 12px 12px;
+    }
+
+    /* Navigation */
+    .recent-nav {
+      display: flex; align-items: center;
+      justify-content: center; gap: 12px; margin-top: 6px;
+    }
+    .nav-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 4px 6px; border-radius: 6px;
+      opacity: 0.5; transition: opacity 0.15s ease, background 0.15s ease;
+      font-family: 'Doto', monospace; font-size: 10px;
+      color: var(--bodhi-ink-muted); letter-spacing: 0.06em;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .nav-btn:hover:not(:disabled) { opacity: 1; background: #F5F5F5; }
+    .nav-btn:disabled { opacity: 0.2; cursor: default; }
+    .nav-hint { font-size: 10px; color: var(--bodhi-ink-muted); letter-spacing: 0.06em; }
+    .settings-section { margin-bottom: 18px; flex-shrink: 0; }
+    .settings-list { display: flex; flex-direction: column; gap: 2px; padding-bottom: 2px; }
+    .setting-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 9px 4px;
+      border-bottom: 1px dashed #F0F0F0;
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 13px; color: var(--bodhi-ink-body); letter-spacing: 0.03em; }
+    .setting-sub { font-size: 10px; color: var(--bodhi-ink-muted); margin-top: 2px; letter-spacing: 0.04em; }
+
+    .toggle-wrap {
+      position: relative; width: 36px; height: 20px;
+      border-radius: 999px; background: #E8E8E8;
+      border: none; cursor: pointer; padding: 0;
+      transition: background 0.25s cubic-bezier(0.4,0,0.2,1);
+      flex-shrink: 0;
+    }
+    .toggle-wrap.on { background: #111111; }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: white;
+      transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .toggle-wrap.on .toggle-thumb { left: 19px; }
+    .footer {
+      padding: 11px 22px; background: #FAFAFA;
+      border-top: 1px solid #F0F0F0;
+      display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .footer-scanner {
+      position: relative; width: 88px; height: 10px; flex-shrink: 0;
+    }
+    .footer-scanner-dot {
+      position: absolute; top: 50%; left: 0;
+      width: 4px; height: 4px; margin-top: -2px;
+      border-radius: 50%; background: #AAAAAA;
+      opacity: 0; transition: opacity 0.4s ease;
+    }
+    .footer-scanner-dot.scanning {
+      opacity: 1;
+      animation: bodhi-scanner 2.8s cubic-bezier(0.45,0,0.55,1) infinite;
+    }
+    .footer-tagline {
+      font-size: 10px; color: var(--bodhi-ink-muted);
+      letter-spacing: 0.05em; transition: opacity 0.4s ease;
+    }
+    .wavy-path { transition: stroke 0.12s ease; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <svg class="header-bg-dots" width="120" height="90" viewBox="0 0 120 90" id="bg-dots-svg"></svg>
+
+    <div class="header-inner">
+      <div>
+        <div class="header-logo-row">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;">
+            <circle id="header-icon-circle"
+              cx="11" cy="11" r="7"
+              stroke="#CCCCCC" stroke-width="1.4"
+              stroke-linecap="round" stroke-dasharray="1.8 2.8"
+              fill="none"
+              style="transform-origin:11px 11px; animation: bodhi-dash-orbit 3.5s linear infinite; transition: opacity 0.4s ease;"/>
+            <line id="header-icon-line" x1="16.5" y1="16.5" x2="21" y2="21"
+              stroke="#CCCCCC" stroke-width="1.4" stroke-linecap="round"
+              style="transition: opacity 0.4s ease;"/>
+          </svg>
+          <span class="header-wordmark">bodhi</span>
+        </div>
+        <p class="header-tagline">vocabulary from video</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Shortcuts -->
+    <div class="shortcuts-section">
+      <button class="section-header" id="shortcuts-header">
+        <hr>
+        <span class="section-title">shortcuts</span>
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
+          <polyline points="6 9 12 15 18 9" stroke="#555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <hr>
+      </button>
+      <div class="section-body open" id="shortcuts-body">
+        <div class="shortcuts-list">
+          <div class="shortcut-row">
+            <span class="shortcut-label">look up word from captions</span>
+            <div class="shortcut-keys">
+              <span class="key" id="key-mod">⌘</span>
+              <span class="key">B</span>
+            </div>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">open search box</span>
+            <div class="shortcut-keys">
+              <span class="key" id="key-mod2">⌘</span>
+              <span class="key">⇧</span>
+              <span class="key">B</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Lookups -->
+    <div class="recent-section">
+      <button class="section-header" id="recent-header">
+        <hr>
+        <span class="section-title">recent lookups</span>
+        <span class="section-count" id="recent-count"></span>
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
+          <polyline points="6 9 12 15 18 9" stroke="#555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <hr>
+      </button>
+      <div class="section-body open" id="recent-body">
+        <div class="lookup-list-wrap" id="lookup-list-wrap">
+          <div class="lookup-list" id="lookup-list"></div>
+        </div>
+        <div id="lookup-fade" class="lookup-fade" style="display:none;"></div>
+        <div class="recent-nav" id="recent-nav" style="display:none;">
+          <button class="nav-btn" id="nav-up" disabled>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <polyline points="6 15 12 9 18 15" stroke="#AAAAAA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            prev
+          </button>
+          <span class="nav-hint" id="nav-hint"></span>
+          <button class="nav-btn" id="nav-down">
+            next
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+              <polyline points="6 9 12 15 18 9" stroke="#AAAAAA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="settings-section">
+      <button class="section-header" id="settings-header">
+        <hr>
+        <span class="section-title">settings</span>
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
+          <polyline points="6 9 12 15 18 9" stroke="#555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <hr>
+      </button>
+      <div class="section-body open" id="settings-body">
+        <div class="settings-list">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">extension enabled</div>
+              <div class="setting-sub">toggle bodhi on this site</div>
+            </div>
+            <button class="toggle-wrap on" id="toggle-enabled" role="switch" aria-checked="true">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">auto-dismiss widget</div>
+              <div class="setting-sub">closes after 6–8 seconds</div>
+            </div>
+            <button class="toggle-wrap on" id="toggle-autodismiss" role="switch" aria-checked="true">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Auto-enable captions when needed</div>
+              <div class="setting-sub">turns on YouTube CC if Bodhi can't find a transcript</div>
+            </div>
+            <button class="toggle-wrap on" id="toggle-autoenable-captions" role="switch" aria-checked="true">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-scanner">
+      <svg width="88" height="10" viewBox="0 0 88 10" style="display:block;">
+        <line x1="0" y1="5" x2="88" y2="5"
+          stroke="#E8E8E8" stroke-width="1.8"
+          stroke-linecap="round" stroke-dasharray="2 5.5"/>
+      </svg>
+      <div class="footer-scanner-dot scanning" id="scanner-dot"></div>
+    </div>
+    <span class="footer-tagline" id="footer-tagline">still curious? keep watching.</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
