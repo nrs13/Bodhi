@@ -641,16 +641,20 @@
   text-transform: uppercase !important;
 }
 
-/* ~5 rows visible (entry ~36px), then scroll */
+/* ~5 rows visible, then scroll — even 8px gap (spacing scale) */
 .bodhi-history-list {
   margin-top: var(--bodhi-space-1) !important;
-  max-height: 180px !important;
+  max-height: 220px !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
   scrollbar-gutter: stable !important;
   scrollbar-width: thin !important;
   scrollbar-color: var(--bodhi-line) transparent !important;
   outline: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--bodhi-space-1) !important;
+  padding-right: 2px !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar {
@@ -662,46 +666,87 @@
   border-radius: 4px !important;
 }
 
+.bodhi-history-row {
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
 .bodhi-history-entry {
   display: flex !important;
   align-items: center !important;
+  justify-content: space-between !important;
   gap: var(--bodhi-space-2) !important;
+  width: 100% !important;
   min-height: 36px !important;
-  padding: 6px var(--bodhi-space-2) !important;
-  border-radius: 7px !important;
+  padding: var(--bodhi-space-2) !important;
+  border-radius: 8px !important;
   cursor: pointer !important;
-  transition: background var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  transition: background var(--bodhi-motion-fast) var(--bodhi-ease), border-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  border: none !important;
   border-left: 2px solid transparent !important;
+  background: transparent !important;
   color: var(--bodhi-ink-faint) !important;
+  font: inherit !important;
+  text-align: left !important;
 }
 
-.bodhi-history-entry:hover,
-.bodhi-history-entry.bodhi-suggestion-active {
+.bodhi-history-entry-main {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-2) !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.bodhi-history-entry-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-2) !important;
+  flex-shrink: 0 !important;
+}
+
+/* Hover only highlights — does not change view */
+.bodhi-history-entry:hover {
   background: var(--bodhi-hover) !important;
 }
 
-.bodhi-history-entry.bodhi-suggestion-active {
+.bodhi-history-entry.is-kb-focus {
+  background: var(--bodhi-hover) !important;
   border-left-color: var(--bodhi-accent) !important;
+  color: var(--bodhi-ink) !important;
 }
 
 .bodhi-history-entry.is-current {
   border-left-color: var(--bodhi-line) !important;
 }
 
-.bodhi-history-entry.is-current.bodhi-suggestion-active {
+.bodhi-history-entry.is-current.is-kb-focus,
+.bodhi-history-row.is-expanded .bodhi-history-entry {
   border-left-color: var(--bodhi-accent) !important;
+}
+
+.bodhi-history-row.is-expanded .bodhi-history-entry {
+  background: var(--bodhi-hover) !important;
+  border-radius: 8px 8px 0 0 !important;
 }
 
 .bodhi-history-word {
   font-family: var(--bodhi-font) !important;
   font-weight: 700 !important;
   font-size: 13px !important;
-  flex: 1 !important;
-  letter-spacing: 0.02em !important;
-  color: var(--bodhi-ink-faint) !important;
+  letter-spacing: -0.01em !important;
+  color: var(--bodhi-ink-soft) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-.bodhi-history-word.is-current {
+.bodhi-history-entry:hover .bodhi-history-word,
+.bodhi-history-entry.is-kb-focus .bodhi-history-word,
+.bodhi-history-word.is-current,
+.bodhi-history-row.is-expanded .bodhi-history-word {
   color: var(--bodhi-ink) !important;
 }
 
@@ -711,6 +756,56 @@
   color: var(--bodhi-ink-faint) !important;
   font-style: italic !important;
   flex-shrink: 0 !important;
+}
+
+.bodhi-history-chevron {
+  color: var(--bodhi-ink-faint) !important;
+  opacity: 0.45 !important;
+  transition: transform var(--bodhi-motion-fast) var(--bodhi-ease), opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  flex-shrink: 0 !important;
+}
+
+.bodhi-history-entry:hover .bodhi-history-chevron,
+.bodhi-history-entry.is-kb-focus .bodhi-history-chevron {
+  opacity: 0.85 !important;
+}
+
+.bodhi-history-chevron.open {
+  transform: rotate(180deg) !important;
+  opacity: 1 !important;
+}
+
+/* Inline definition — same pattern as popup recent lookups */
+.bodhi-history-def {
+  display: grid !important;
+  grid-template-rows: 0fr !important;
+  transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease) !important;
+  background: var(--bodhi-canvas) !important;
+}
+
+.bodhi-history-row.is-expanded .bodhi-history-def {
+  grid-template-rows: 1fr !important;
+}
+
+.bodhi-history-def > p {
+  overflow: hidden !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 var(--bodhi-space-3) 0 36px !important;
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: var(--bodhi-ink-soft) !important;
+}
+
+.bodhi-history-row.is-expanded .bodhi-history-def > p {
+  padding-top: var(--bodhi-space-1) !important;
+  padding-bottom: var(--bodhi-space-2) !important;
+}
+
+.bodhi-history-def-missing {
+  font-style: italic !important;
+  color: var(--bodhi-ink-faint) !important;
 }
 
 .bodhi-unavail-actions {

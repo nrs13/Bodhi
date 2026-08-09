@@ -178,16 +178,37 @@
           </div>`
       },
       {
-        label: 'History',
+        label: 'History (inline expand)',
         html: `${toolbar({ back: true, title: 'session history' })}
           <div class="bodhi-divider" role="separator"></div>
           <div class="bodhi-history-list">
-            <div class="bodhi-history-entry is-current">${caption}<span class="bodhi-history-word is-current">ephemeral</span><span class="bodhi-history-pos">adj</span></div>
-            <div class="bodhi-history-entry">${search}<span class="bodhi-history-word">lucid</span><span class="bodhi-history-pos">adj</span></div>
-            <div class="bodhi-history-entry">${caption}<span class="bodhi-history-word">transient</span><span class="bodhi-history-pos">adj</span></div>
-            <div class="bodhi-history-entry">${search}<span class="bodhi-history-word">opaque</span><span class="bodhi-history-pos">adj</span></div>
-            <div class="bodhi-history-entry">${caption}<span class="bodhi-history-word">candid</span><span class="bodhi-history-pos">adj</span></div>
-            <div class="bodhi-history-entry">${search}<span class="bodhi-history-word">sparse</span><span class="bodhi-history-pos">adj</span></div>
+            <div class="bodhi-history-row is-current is-expanded">
+              <button type="button" class="bodhi-history-entry is-current" aria-expanded="true">
+                <span class="bodhi-history-entry-main">${caption}<span class="bodhi-history-word is-current">ephemeral</span></span>
+                <span class="bodhi-history-entry-meta"><span class="bodhi-history-pos">adj</span>
+                  <svg class="bodhi-history-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </button>
+              <div class="bodhi-history-def"><p>Lasting for a very short time.</p></div>
+            </div>
+            <div class="bodhi-history-row">
+              <button type="button" class="bodhi-history-entry" aria-expanded="false">
+                <span class="bodhi-history-entry-main">${search}<span class="bodhi-history-word">lucid</span></span>
+                <span class="bodhi-history-entry-meta"><span class="bodhi-history-pos">adj</span>
+                  <svg class="bodhi-history-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </button>
+              <div class="bodhi-history-def"><p>Expressed clearly; easy to understand.</p></div>
+            </div>
+            <div class="bodhi-history-row">
+              <button type="button" class="bodhi-history-entry is-kb-focus" aria-expanded="false">
+                <span class="bodhi-history-entry-main">${caption}<span class="bodhi-history-word">transient</span></span>
+                <span class="bodhi-history-entry-meta"><span class="bodhi-history-pos">adj</span>
+                  <svg class="bodhi-history-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </button>
+              <div class="bodhi-history-def"><p>Passing with time; not permanent.</p></div>
+            </div>
           </div>`
       },
       {
