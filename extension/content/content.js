@@ -325,7 +325,7 @@ async function loadVideoHistory() {
 }
 
 function hotkeyIconSvg() {
-  return `<svg class="bodhi-method-icon" width="13" height="11" viewBox="0 0 16 13" fill="none" aria-hidden="true">
+  return `<svg class="bodhi-method-icon bodhi-method-caption" width="13" height="11" viewBox="0 0 16 13" fill="none" aria-hidden="true">
     <rect x="1" y="1" width="14" height="11" rx="2.5"
       stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4"
       stroke-linecap="round" fill="none"/>
@@ -337,7 +337,7 @@ function hotkeyIconSvg() {
 }
 
 function searchIconSvg() {
-  return `<svg class="bodhi-method-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+  return `<svg class="bodhi-method-icon bodhi-method-search" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
     <circle cx="6" cy="6" r="4.2"
       stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4"
       stroke-linecap="round" fill="none"/>

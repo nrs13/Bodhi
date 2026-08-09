@@ -11,8 +11,8 @@
     }
     @keyframes bodhi-scanner {
       0%   { transform: translateX(0); opacity: 0; }
-      8%   { opacity: 1; }
-      92%  { opacity: 1; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
       100% { transform: translateX(72px); opacity: 0; }
     }
     @keyframes bodhi-fade-in {
@@ -28,224 +28,135 @@
       --bodhi-space-3: 12px;
       --bodhi-space-4: 16px;
       --bodhi-space-5: 24px;
-      --bodhi-canvas: #F7F7F5;
+
+      --bodhi-canvas: #F4F6FA;
       --bodhi-surface: #FFFFFF;
-      --bodhi-ink: #141414;
-      --bodhi-ink-soft: #5C5C5C;
-      --bodhi-ink-faint: #8A8A8A;
-      --bodhi-line: #E6E6E4;
-      --bodhi-accent: #2F6FED;
-      --bodhi-hover: #F2F2F0;
-      --bodhi-ink-primary: var(--bodhi-ink);
-      --bodhi-ink-body: var(--bodhi-ink);
-      --bodhi-ink-secondary: var(--bodhi-ink-soft);
-      --bodhi-ink-muted: var(--bodhi-ink-faint);
-      --bodhi-font-display: 'Doto', sans-serif;
-      --bodhi-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --bodhi-ink: #12141A;
+      --bodhi-ink-soft: #5A6170;
+      --bodhi-ink-faint: #8B92A1;
+      --bodhi-line: #E2E6EE;
+      --bodhi-hover: #EEF1F7;
+
+      /* Role accents — used sparingly */
+      --bodhi-accent: #3B6CFF;       /* interactive / focus */
+      --bodhi-accent-soft: #E8EFFF;  /* accent wash */
+      --bodhi-signal: #14A37A;      /* live / enabled */
+      --bodhi-caption: #5B6CFF;     /* caption-source cue */
+      --bodhi-search: #0F9B8E;      /* search-source cue */
+
+      --bodhi-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       --bodhi-motion-fast: 140ms;
       --bodhi-motion-base: 220ms;
       --bodhi-ease: cubic-bezier(0.22, 1, 0.36, 1);
-      --bodhi-shadow: 0 12px 36px rgba(20,20,20,0.10);
+      --bodhi-shadow: 0 10px 32px rgba(18, 20, 26, 0.10);
     }
 
     html[data-bodhi-theme="dark"] {
-      --bodhi-canvas: #121214;
-      --bodhi-surface: #1C1C1F;
-      --bodhi-ink: #F0F0F2;
-      --bodhi-ink-soft: #A0A0A6;
-      --bodhi-ink-faint: #7A7A82;
-      --bodhi-line: #2E2E32;
-      --bodhi-accent: #7BA3F7;
-      --bodhi-hover: #26262A;
-      --bodhi-shadow: 0 12px 36px rgba(0,0,0,0.45);
+      --bodhi-canvas: #14161C;
+      --bodhi-surface: #1B1E26;
+      --bodhi-ink: #F1F3F7;
+      --bodhi-ink-soft: #A4ABB8;
+      --bodhi-ink-faint: #7A8290;
+      --bodhi-line: #2C313C;
+      --bodhi-hover: #252933;
+      --bodhi-accent: #7B9CFF;
+      --bodhi-accent-soft: #243056;
+      --bodhi-signal: #2DD4A8;
+      --bodhi-caption: #8B9BFF;
+      --bodhi-search: #2BC4B4;
+      --bodhi-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
     }
 
-    @font-face {
-      font-family: 'Doto';
-      src: url('../fonts/Doto-Regular.ttf') format('truetype');
-      font-weight: 400;
-      font-style: normal;
-    }
-    @font-face {
-      font-family: 'Doto';
-      src: url('../fonts/Doto-Bold.ttf') format('truetype');
-      font-weight: 700;
-      font-style: normal;
+    html, body {
+      width: 360px;
+      max-width: 100vw;
+      height: min(640px, 100vh);
+      min-height: 480px;
     }
 
     body {
-      width: 340px;
-      height: 620px;
       display: flex;
       flex-direction: column;
-      font-family: var(--bodhi-font-body);
+      font-family: var(--bodhi-font);
+      font-size: 13px;
+      line-height: 1.4;
       -webkit-font-smoothing: antialiased;
       background: var(--bodhi-surface);
-      border-radius: 16px;
-      box-shadow: var(--bodhi-shadow);
+      color: var(--bodhi-ink);
       overflow: hidden;
       opacity: 0;
       transform: translateY(6px);
-      transition: opacity 0.28s var(--bodhi-ease), transform 0.28s var(--bodhi-ease);
-      color: var(--bodhi-ink);
+      transition:
+        opacity 0.28s var(--bodhi-ease),
+        transform 0.28s var(--bodhi-ease);
     }
+
     body.mounted {
       opacity: 1;
       transform: translateY(0);
     }
 
     .header {
-      padding: var(--bodhi-space-4) var(--bodhi-space-4) var(--bodhi-space-3);
+      flex-shrink: 0;
+      padding: var(--bodhi-space-4);
       background: var(--bodhi-canvas);
       border-bottom: 1px solid var(--bodhi-line);
       position: relative;
       overflow: hidden;
-      flex-shrink: 0;
     }
+
     .header-bg-dots {
       position: absolute;
-      top: 0; right: 0;
-      opacity: 0.4;
+      top: 0;
+      right: 0;
+      opacity: 0.35;
       pointer-events: none;
-      color: var(--bodhi-ink-faint);
+      color: var(--bodhi-accent);
     }
+
     .header-inner {
-      display: flex;
-      align-items: flex-start;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--bodhi-space-2);
     }
+
     .header-logo-row {
       display: flex;
       align-items: center;
       gap: var(--bodhi-space-2);
+      color: var(--bodhi-accent);
     }
+
     .header-wordmark {
-      font-family: var(--bodhi-font-display);
+      font-size: 22px;
       font-weight: 700;
-      font-size: 24px;
-      color: var(--bodhi-ink);
-      letter-spacing: 0.08em;
+      letter-spacing: -0.02em;
       line-height: 1;
+      color: var(--bodhi-ink);
     }
+
     .header-tagline {
-      font-family: var(--bodhi-font-body);
-      font-size: 11px;
+      margin: 0;
+      padding-left: 30px;
+      font-size: 12px;
       color: var(--bodhi-ink-faint);
-      margin: var(--bodhi-space-1) 0 0 30px;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.01em;
     }
 
     .body {
+      flex: 1;
+      min-height: 0;
       padding: var(--bodhi-space-4);
       display: flex;
       flex-direction: column;
       gap: var(--bodhi-space-4);
-      flex: 1;
-      min-height: 0;
       overflow: hidden;
-    }
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: var(--bodhi-space-2);
-      width: 100%;
-      background: none;
-      border: none;
-      padding: 0 0 var(--bodhi-space-2) 0;
-      cursor: pointer;
-      font-family: var(--bodhi-font-display);
-    }
-    .section-header hr {
-      flex: 1; border: none;
-      border-top: 1px dashed var(--bodhi-line); margin: 0;
-    }
-    .section-header .section-title {
-      font-family: var(--bodhi-font-display);
-      font-weight: 700;
-      font-size: 10px;
-      color: var(--bodhi-ink-soft);
-      letter-spacing: 0.12em;
-      white-space: nowrap;
-      text-transform: uppercase;
-    }
-    .section-header .section-count {
-      font-family: var(--bodhi-font-body);
-      font-size: 10px;
-      color: var(--bodhi-ink-faint);
-      margin-left: var(--bodhi-space-1);
-    }
-    .section-header:hover .section-title { color: var(--bodhi-ink-faint); }
-    .section-chevron {
-      flex-shrink: 0;
-      transform: rotate(0deg);
-      transition: transform var(--bodhi-motion-base) var(--bodhi-ease);
-      opacity: 0.35;
-      color: var(--bodhi-ink-soft);
-    }
-    .section-chevron.open { transform: rotate(180deg); }
-    .section-header:hover .section-chevron { opacity: 0.65; }
-
-    /* Collapse via grid rows — avoids max-height:400px phantom gap */
-    .section-body {
-      display: grid;
-      grid-template-rows: 0fr;
-      transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
-    }
-    .section-body > .section-body-inner {
-      overflow: hidden;
-      min-height: 0;
-    }
-    .section-body.open {
-      grid-template-rows: 1fr;
     }
 
     .shortcuts-section,
     .settings-section {
       flex-shrink: 0;
-    }
-
-    #recent-body.open {
-      flex: 1 1 auto;
-      min-height: 0;
-      /* keep display:grid from .section-body so collapse stays gap-free */
-    }
-    #recent-body.open > .section-body-inner {
-      flex: 1;
-      min-height: 168px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .shortcuts-list { display: flex; flex-direction: column; gap: var(--bodhi-space-2); }
-    .shortcut-row {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      gap: var(--bodhi-space-3);
-      padding: var(--bodhi-space-2) var(--bodhi-space-3);
-      border-radius: 10px;
-      background: var(--bodhi-canvas);
-      border: 1px solid var(--bodhi-line);
-    }
-    .shortcut-label {
-      font-size: 12px;
-      color: var(--bodhi-ink);
-      letter-spacing: 0.01em;
-    }
-    .shortcut-keys { display: flex; align-items: center; gap: var(--bodhi-space-1); }
-    .key {
-      font-family: var(--bodhi-font-display);
-      font-weight: 700;
-      font-size: 11px;
-      color: var(--bodhi-ink-soft);
-      background: var(--bodhi-hover);
-      border: 1px solid var(--bodhi-line);
-      border-radius: 6px;
-      padding: 2px 7px;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
     }
 
     .recent-section {
@@ -255,62 +166,227 @@
       flex-direction: column;
     }
 
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: var(--bodhi-space-2);
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0 0 var(--bodhi-space-2);
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .section-header hr {
+      flex: 1;
+      border: none;
+      border-top: 1px solid var(--bodhi-line);
+      margin: 0;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--bodhi-ink-soft);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .section-count {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--bodhi-accent);
+      margin-left: 2px;
+    }
+
+    .section-chevron {
+      flex-shrink: 0;
+      color: var(--bodhi-ink-faint);
+      transition: transform var(--bodhi-motion-base) var(--bodhi-ease);
+    }
+
+    .section-chevron.open {
+      transform: rotate(180deg);
+    }
+
+    .section-header:hover .section-title {
+      color: var(--bodhi-ink);
+    }
+
+    .section-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
+    }
+
+    .section-body.open {
+      grid-template-rows: 1fr;
+    }
+
+    .section-body-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    #recent-body.open {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    #recent-body.open > .section-body-inner {
+      height: 100%;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .shortcuts-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--bodhi-space-2);
+    }
+
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--bodhi-space-3);
+      padding: var(--bodhi-space-2) var(--bodhi-space-3);
+      border-radius: 10px;
+      background: var(--bodhi-canvas);
+      border: 1px solid var(--bodhi-line);
+    }
+
+    .shortcut-label {
+      font-size: 12px;
+      color: var(--bodhi-ink);
+      min-width: 0;
+    }
+
+    .shortcut-keys {
+      display: flex;
+      align-items: center;
+      gap: var(--bodhi-space-1);
+      flex-shrink: 0;
+    }
+
+    .key {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--bodhi-accent);
+      background: var(--bodhi-accent-soft);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 3px 7px;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
     .lookup-list-wrap {
       flex: 1;
-      min-height: 168px;
+      min-height: 160px;
       overflow-y: auto;
       scrollbar-width: none;
       border: 1px solid var(--bodhi-line);
       border-radius: 12px;
       background: var(--bodhi-surface);
     }
-    .lookup-list-wrap::-webkit-scrollbar { display: none; }
-    .lookup-list { display: flex; flex-direction: column; }
+
+    .lookup-list-wrap::-webkit-scrollbar {
+      display: none;
+    }
+
+    .lookup-list {
+      display: flex;
+      flex-direction: column;
+    }
 
     .lookup-item {
-      display: flex; flex-direction: column;
-      background: transparent;
-      border: none; padding: 0;
-      cursor: pointer; text-align: left;
-      font-family: var(--bodhi-font-body);
+      display: flex;
+      flex-direction: column;
       width: 100%;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
       color: inherit;
     }
+
     .lookup-item-inner {
-      display: flex; align-items: center;
+      display: flex;
+      align-items: center;
       justify-content: space-between;
-      padding: var(--bodhi-space-2) var(--bodhi-space-3);
+      gap: var(--bodhi-space-2);
+      padding: 10px var(--bodhi-space-3);
       border-left: 2px solid transparent;
-      background: var(--bodhi-surface);
-      transition: background var(--bodhi-motion-fast) var(--bodhi-ease), border-left-color var(--bodhi-motion-fast) var(--bodhi-ease);
+      transition:
+        background var(--bodhi-motion-fast) var(--bodhi-ease),
+        border-color var(--bodhi-motion-fast) var(--bodhi-ease);
     }
+
     .lookup-item.active .lookup-item-inner,
     .lookup-item:hover .lookup-item-inner {
       background: var(--bodhi-hover);
-      border-left-color: var(--bodhi-line);
+      border-left-color: var(--bodhi-accent);
     }
-    .lookup-item-left { display: flex; align-items: center; gap: var(--bodhi-space-2); color: var(--bodhi-ink-faint); }
+
+    .lookup-item-left {
+      display: flex;
+      align-items: center;
+      gap: var(--bodhi-space-2);
+      min-width: 0;
+    }
+
+    .lookup-item-left .method-icon {
+      flex-shrink: 0;
+    }
+
+    .lookup-item-left .method-icon.caption { color: var(--bodhi-caption); }
+    .lookup-item-left .method-icon.search { color: var(--bodhi-search); }
+
     .lookup-word {
-      font-family: var(--bodhi-font-display);
-      font-weight: 700;
       font-size: 13px;
+      font-weight: 600;
       color: var(--bodhi-ink);
-      letter-spacing: 0.02em;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .lookup-right { display: flex; align-items: center; gap: var(--bodhi-space-2); }
+
+    .lookup-right {
+      display: flex;
+      align-items: center;
+      gap: var(--bodhi-space-2);
+      flex-shrink: 0;
+    }
+
     .lookup-pos {
-      font-size: 10px;
-      color: var(--bodhi-ink-faint);
+      font-size: 11px;
       font-style: italic;
-    }
-    .lookup-chevron {
-      transition: transform var(--bodhi-motion-fast) var(--bodhi-ease);
-      opacity: 0.35;
       color: var(--bodhi-ink-faint);
     }
+
+    .lookup-chevron {
+      color: var(--bodhi-ink-faint);
+      transition: transform var(--bodhi-motion-fast) var(--bodhi-ease);
+      opacity: 0.5;
+    }
+
     .lookup-item.active .lookup-chevron,
-    .lookup-item:hover .lookup-chevron { opacity: 0.7; }
-    .lookup-chevron.open { transform: rotate(180deg); }
+    .lookup-item:hover .lookup-chevron {
+      opacity: 1;
+    }
+
+    .lookup-chevron.open {
+      transform: rotate(180deg);
+    }
 
     .lookup-def {
       display: grid;
@@ -318,91 +394,194 @@
       transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
       background: var(--bodhi-canvas);
     }
+
     .lookup-def > p {
       overflow: hidden;
       min-height: 0;
-      font-size: 11px;
-      color: var(--bodhi-ink-soft);
-      line-height: 1.5;
       margin: 0;
       padding: 0 var(--bodhi-space-3) 0 36px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--bodhi-ink-soft);
     }
-    .lookup-def.open { grid-template-rows: 1fr; }
-    .lookup-def.open > p { padding-bottom: var(--bodhi-space-2); }
-    .lookup-divider { margin: 0 var(--bodhi-space-3); color: var(--bodhi-line); }
-    .lookup-divider svg line { stroke: currentColor; }
+
+    .lookup-def.open {
+      grid-template-rows: 1fr;
+    }
+
+    .lookup-def.open > p {
+      padding-bottom: var(--bodhi-space-2);
+    }
+
+    .lookup-divider {
+      margin: 0 var(--bodhi-space-3);
+      color: var(--bodhi-line);
+    }
+
+    .lookup-divider svg line {
+      stroke: currentColor;
+    }
 
     .lookup-empty {
-      display: flex; flex-direction: column; align-items: center;
-      padding: var(--bodhi-space-5) var(--bodhi-space-3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       gap: var(--bodhi-space-2);
+      padding: var(--bodhi-space-5) var(--bodhi-space-4);
+      min-height: 140px;
       animation: bodhi-fade-in 0.28s var(--bodhi-ease) both;
+      text-align: center;
     }
+
     .lookup-empty-icon {
-      font-size: 22px; color: var(--bodhi-ink-faint); line-height: 1;
+      width: 28px;
+      height: 28px;
+      color: var(--bodhi-accent);
+      opacity: 0.7;
     }
-    .lookup-empty-line1 { font-size: 12px; color: var(--bodhi-ink-soft); }
-    .lookup-empty-line2 { font-size: 11px; color: var(--bodhi-ink-faint); text-align: center; }
+
+    .lookup-empty-line1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--bodhi-ink-soft);
+    }
+
+    .lookup-empty-line2 {
+      font-size: 12px;
+      color: var(--bodhi-ink-faint);
+      max-width: 220px;
+    }
 
     .lookup-fade {
       height: var(--bodhi-space-4);
       margin-top: calc(-1 * var(--bodhi-space-4));
-      position: relative;
       pointer-events: none;
       background: linear-gradient(to bottom, transparent, var(--bodhi-surface));
       border-radius: 0 0 12px 12px;
     }
 
     .recent-nav {
-      display: flex; align-items: center;
+      display: flex;
+      align-items: center;
       justify-content: center;
       gap: var(--bodhi-space-3);
       margin-top: var(--bodhi-space-2);
       flex-shrink: 0;
     }
+
+    .recent-nav[hidden],
+    .lookup-fade[hidden] {
+      display: none !important;
+    }
+
     .nav-btn {
-      background: none; border: none; cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--bodhi-space-1);
+      background: none;
+      border: none;
+      cursor: pointer;
       padding: var(--bodhi-space-1) var(--bodhi-space-2);
       border-radius: 6px;
-      opacity: 0.55;
-      transition: opacity var(--bodhi-motion-fast) var(--bodhi-ease), background var(--bodhi-motion-fast) var(--bodhi-ease);
-      font-family: var(--bodhi-font-body);
-      font-size: 10px;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 500;
       color: var(--bodhi-ink-faint);
-      display: flex; align-items: center; gap: var(--bodhi-space-1);
+      transition:
+        color var(--bodhi-motion-fast) var(--bodhi-ease),
+        background var(--bodhi-motion-fast) var(--bodhi-ease);
     }
-    .nav-btn:hover:not(:disabled) { opacity: 1; background: var(--bodhi-hover); }
-    .nav-btn:disabled { opacity: 0.25; cursor: default; }
-    .nav-hint { font-size: 10px; color: var(--bodhi-ink-faint); }
 
-    .settings-list { display: flex; flex-direction: column; gap: 0; }
+    .nav-btn:hover:not(:disabled) {
+      color: var(--bodhi-accent);
+      background: var(--bodhi-accent-soft);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .nav-hint {
+      font-size: 11px;
+      color: var(--bodhi-ink-faint);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+    }
+
     .setting-row {
-      display: flex; align-items: center;
+      display: flex;
+      align-items: center;
       justify-content: space-between;
       gap: var(--bodhi-space-3);
-      padding: var(--bodhi-space-3) var(--bodhi-space-1);
-      border-bottom: 1px dashed var(--bodhi-line);
+      padding: var(--bodhi-space-3) 0;
+      border-bottom: 1px solid var(--bodhi-line);
     }
-    .setting-row:last-child { border-bottom: none; }
-    .setting-label { font-size: 13px; color: var(--bodhi-ink); }
-    .setting-sub { font-size: 10px; color: var(--bodhi-ink-faint); margin-top: 2px; }
+
+    .setting-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .setting-row:first-child {
+      padding-top: 0;
+    }
+
+    .setting-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--bodhi-ink);
+    }
+
+    .setting-sub {
+      font-size: 11px;
+      color: var(--bodhi-ink-faint);
+      margin-top: 2px;
+      line-height: 1.35;
+    }
 
     .toggle-wrap {
-      position: relative; width: 36px; height: 20px;
-      border-radius: 999px; background: var(--bodhi-line);
-      border: none; cursor: pointer; padding: 0;
-      transition: background var(--bodhi-motion-base) var(--bodhi-ease);
+      position: relative;
+      width: 36px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--bodhi-line);
+      border: none;
+      cursor: pointer;
+      padding: 0;
       flex-shrink: 0;
+      transition: background var(--bodhi-motion-base) var(--bodhi-ease);
     }
-    .toggle-wrap.on { background: var(--bodhi-ink); }
+
+    .toggle-wrap.on {
+      background: var(--bodhi-accent);
+    }
+
     .toggle-thumb {
-      position: absolute; top: 3px; left: 3px;
-      width: 14px; height: 14px; border-radius: 50%;
-      background: var(--bodhi-surface);
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
       transition: left var(--bodhi-motion-base) var(--bodhi-ease);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
-    .toggle-wrap.on .toggle-thumb { left: 19px; }
+
+    .toggle-wrap.on .toggle-thumb {
+      left: 19px;
+    }
 
     .theme-seg {
       display: flex;
@@ -412,211 +591,208 @@
       flex-shrink: 0;
       background: var(--bodhi-canvas);
     }
+
     .theme-seg button {
       border: none;
       background: transparent;
       color: var(--bodhi-ink-faint);
-      font-family: var(--bodhi-font-body);
-      font-size: 10px;
-      padding: var(--bodhi-space-1) var(--bodhi-space-2);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 8px;
       cursor: pointer;
-      letter-spacing: 0.02em;
+      transition:
+        background var(--bodhi-motion-fast) var(--bodhi-ease),
+        color var(--bodhi-motion-fast) var(--bodhi-ease);
     }
+
     .theme-seg button.active {
-      background: var(--bodhi-ink);
-      color: var(--bodhi-surface);
+      background: var(--bodhi-accent);
+      color: #FFFFFF;
     }
 
     .footer {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--bodhi-space-3);
       padding: var(--bodhi-space-3) var(--bodhi-space-4);
       background: var(--bodhi-canvas);
       border-top: 1px solid var(--bodhi-line);
-      display: flex; align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
     }
+
     .footer-scanner {
-      position: relative; width: 88px; height: 10px; flex-shrink: 0;
+      position: relative;
+      width: 88px;
+      height: 10px;
+      flex-shrink: 0;
+      color: var(--bodhi-line);
     }
+
     .footer-scanner-dot {
-      position: absolute; top: 50%; left: 0;
-      width: 4px; height: 4px; margin-top: -2px;
-      border-radius: 50%; background: var(--bodhi-ink-faint);
-      opacity: 0; transition: opacity 0.3s ease;
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 4px;
+      height: 4px;
+      margin-top: -2px;
+      border-radius: 50%;
+      background: var(--bodhi-signal);
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
+
     .footer-scanner-dot.scanning {
       opacity: 1;
-      animation: bodhi-scanner 2.8s cubic-bezier(0.45,0,0.55,1) infinite;
+      animation: bodhi-scanner 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
     }
+
     .footer-tagline {
-      font-size: 10px; color: var(--bodhi-ink-faint);
-      letter-spacing: 0.03em;
+      font-size: 11px;
+      color: var(--bodhi-ink-faint);
+      text-align: right;
     }
   </style>
 </head>
-
 <body>
-
-  <!-- Header -->
-  <div class="header">
-    <svg class="header-bg-dots" width="120" height="90" viewBox="0 0 120 90" id="bg-dots-svg"></svg>
-
+  <header class="header">
+    <svg class="header-bg-dots" width="120" height="90" viewBox="0 0 120 90" aria-hidden="true"></svg>
     <div class="header-inner">
-      <div>
-        <div class="header-logo-row">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;">
-            <circle id="header-icon-circle"
-              cx="11" cy="11" r="7"
-              stroke="currentColor" stroke-width="1.4"
-              stroke-linecap="round" stroke-dasharray="1.8 2.8"
-              fill="none"
-              style="transform-origin:11px 11px; animation: bodhi-dash-orbit 3.5s linear infinite; transition: opacity 0.4s ease;"/>
-            <line id="header-icon-line" x1="16.5" y1="16.5" x2="21" y2="21"
-              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
-              style="transition: opacity 0.4s ease;"/>
-          </svg>
-          <span class="header-wordmark">bodhi</span>
-        </div>
-        <p class="header-tagline">vocabulary from video</p>
+      <div class="header-logo-row">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle id="header-icon-circle"
+            cx="11" cy="11" r="7"
+            stroke="currentColor" stroke-width="1.4"
+            stroke-linecap="round" stroke-dasharray="1.8 2.8"
+            fill="none"
+            style="transform-origin:11px 11px; animation: bodhi-dash-orbit 3.5s linear infinite;"/>
+          <line id="header-icon-line" x1="16.5" y1="16.5" x2="21" y2="21"
+            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="header-wordmark">bodhi</span>
       </div>
+      <p class="header-tagline">vocabulary from video</p>
     </div>
-  </div>
+  </header>
 
-  <!-- Body -->
-  <div class="body">
-
-    <!-- Shortcuts -->
-    <div class="shortcuts-section">
-      <button class="section-header" id="shortcuts-header">
+  <main class="body">
+    <section class="shortcuts-section">
+      <button type="button" class="section-header" id="shortcuts-header">
         <hr>
         <span class="section-title">shortcuts</span>
-        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
       <div class="section-body open" id="shortcuts-body">
         <div class="section-body-inner">
-        <div class="shortcuts-list">
-          <div class="shortcut-row">
-            <span class="shortcut-label">look up word from captions</span>
-            <div class="shortcut-keys">
-              <span class="key" id="key-mod">⌘</span>
-              <span class="key">B</span>
+          <div class="shortcuts-list">
+            <div class="shortcut-row">
+              <span class="shortcut-label">Look up from captions</span>
+              <div class="shortcut-keys">
+                <span class="key" id="key-mod">⌘</span>
+                <span class="key">B</span>
+              </div>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-label">Open search</span>
+              <div class="shortcut-keys">
+                <span class="key" id="key-mod2">⌘</span>
+                <span class="key">⇧</span>
+                <span class="key">B</span>
+              </div>
             </div>
           </div>
-          <div class="shortcut-row">
-            <span class="shortcut-label">open search box</span>
-            <div class="shortcut-keys">
-              <span class="key" id="key-mod2">⌘</span>
-              <span class="key">⇧</span>
-              <span class="key">B</span>
-            </div>
-          </div>
-        </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Recent Lookups -->
-    <div class="recent-section">
-      <button class="section-header" id="recent-header">
+    <section class="recent-section">
+      <button type="button" class="section-header" id="recent-header">
         <hr>
-        <span class="section-title">recent lookups</span>
+        <span class="section-title">recent</span>
         <span class="section-count" id="recent-count"></span>
-        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
       <div class="section-body open" id="recent-body">
         <div class="section-body-inner">
-        <div class="lookup-list-wrap" id="lookup-list-wrap">
-          <div class="lookup-list" id="lookup-list"></div>
-        </div>
-        <div id="lookup-fade" class="lookup-fade" style="display:none;"></div>
-        <div class="recent-nav" id="recent-nav" style="display:none;">
-          <button class="nav-btn" id="nav-up" disabled>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-              <polyline points="6 15 12 9 18 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            prev
-          </button>
-          <span class="nav-hint" id="nav-hint"></span>
-          <button class="nav-btn" id="nav-down">
-            next
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-              <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
+          <div class="lookup-list-wrap" id="lookup-list-wrap">
+            <div class="lookup-list" id="lookup-list"></div>
+          </div>
+          <div id="lookup-fade" class="lookup-fade" hidden></div>
+          <div class="recent-nav" id="recent-nav" hidden>
+            <button type="button" class="nav-btn" id="nav-up" disabled>prev</button>
+            <span class="nav-hint" id="nav-hint"></span>
+            <button type="button" class="nav-btn" id="nav-down">next</button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Settings -->
-    <div class="settings-section">
-      <button class="section-header" id="settings-header">
+    <section class="settings-section">
+      <button type="button" class="section-header" id="settings-header">
         <hr>
         <span class="section-title">settings</span>
-        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
       <div class="section-body open" id="settings-body">
         <div class="section-body-inner">
-        <div class="settings-list">
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">extension enabled</div>
-              <div class="setting-sub">toggle bodhi on this site</div>
+          <div class="settings-list">
+            <div class="setting-row">
+              <div class="setting-copy">
+                <div class="setting-label">Extension enabled</div>
+                <div class="setting-sub">Turn Bodhi on or off</div>
+              </div>
+              <button type="button" class="toggle-wrap on" id="toggle-enabled" role="switch" aria-checked="true">
+                <span class="toggle-thumb"></span>
+              </button>
             </div>
-            <button class="toggle-wrap on" id="toggle-enabled" role="switch" aria-checked="true">
-              <span class="toggle-thumb"></span>
-            </button>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <div class="setting-label">Auto-dismiss widget</div>
+                <div class="setting-sub">Closes after a few seconds</div>
+              </div>
+              <button type="button" class="toggle-wrap on" id="toggle-autodismiss" role="switch" aria-checked="true">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <div class="setting-label">Auto-enable captions</div>
+                <div class="setting-sub">Turns on YouTube CC when needed</div>
+              </div>
+              <button type="button" class="toggle-wrap on" id="toggle-autoenable-captions" role="switch" aria-checked="true">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <div class="setting-label">Appearance</div>
+                <div class="setting-sub">Auto follows your system theme</div>
+              </div>
+              <div class="theme-seg" id="theme-seg" role="group" aria-label="Appearance">
+                <button type="button" data-theme="system" class="active">Auto</button>
+                <button type="button" data-theme="light">Light</button>
+                <button type="button" data-theme="dark">Dark</button>
+              </div>
+            </div>
           </div>
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">auto-dismiss widget</div>
-              <div class="setting-sub">closes after 6–8 seconds</div>
-            </div>
-            <button class="toggle-wrap on" id="toggle-autodismiss" role="switch" aria-checked="true">
-              <span class="toggle-thumb"></span>
-            </button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Auto-enable captions when needed</div>
-              <div class="setting-sub">turns on YouTube CC if Bodhi can't find a transcript</div>
-            </div>
-            <button class="toggle-wrap on" id="toggle-autoenable-captions" role="switch" aria-checked="true">
-              <span class="toggle-thumb"></span>
-            </button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">appearance</div>
-              <div class="setting-sub">system follows your OS setting</div>
-            </div>
-            <div class="theme-seg" id="theme-seg" role="group" aria-label="Appearance">
-              <button type="button" data-theme="system" class="active">auto</button>
-              <button type="button" data-theme="light">light</button>
-              <button type="button" data-theme="dark">dark</button>
-            </div>
-          </div>
-
-        </div>
         </div>
       </div>
-    </div>
+    </section>
+  </main>
 
-  </div>
-
-  <!-- Footer -->
-  <div class="footer">
-    <div class="footer-scanner">
-      <svg width="88" height="10" viewBox="0 0 88 10" style="display:block;">
+  <footer class="footer">
+    <div class="footer-scanner" aria-hidden="true">
+      <svg width="88" height="10" viewBox="0 0 88 10">
         <line x1="0" y1="5" x2="88" y2="5"
           stroke="currentColor" stroke-width="1.8"
           stroke-linecap="round" stroke-dasharray="2 5.5"/>
@@ -624,7 +800,7 @@
       <div class="footer-scanner-dot scanning" id="scanner-dot"></div>
     </div>
     <span class="footer-tagline" id="footer-tagline">still curious? keep watching.</span>
-  </div>
+  </footer>
 
   <script src="popup.js"></script>
 </body>

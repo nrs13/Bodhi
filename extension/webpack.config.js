@@ -32,7 +32,6 @@ module.exports = {
       patterns: [
         { from: 'manifest.json', to: 'manifest.json' },
         { from: 'styles', to: 'styles' },
-        { from: 'fonts', to: 'fonts' },
         { from: 'icons', to: 'icons' },
         { from: 'popup/popup.html', to: 'popup/popup.html' },
         {

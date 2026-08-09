@@ -40,20 +40,28 @@ function syncThemeSeg() {
 
 function methodIconSvg(source) {
   if (source === 'search') {
-    return `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    return `<svg class="method-icon search" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.1"
         stroke-dasharray="1.5 2.4" stroke-linecap="round" fill="none"/>
       <line x1="9.3" y1="9.3" x2="12.8" y2="12.8" stroke="currentColor" stroke-width="1.1"
         stroke-linecap="round" stroke-dasharray="1.2 2"/>
     </svg>`
   }
-  return `<svg width="13" height="11" viewBox="0 0 16 13" fill="none" aria-hidden="true">
+  return `<svg class="method-icon caption" width="13" height="11" viewBox="0 0 16 13" fill="none" aria-hidden="true">
     <rect x="1" y="1" width="14" height="11" rx="2.5" stroke="currentColor" stroke-width="1.1"
       stroke-dasharray="1.5 2.4" stroke-linecap="round" fill="none"/>
     <line x1="5.5" y1="6.5" x2="10.5" y2="6.5" stroke="currentColor" stroke-width="1"
       stroke-linecap="round" stroke-dasharray="1 1.8"/>
     <line x1="8" y1="4" x2="8" y2="9" stroke="currentColor" stroke-width="1"
       stroke-linecap="round" stroke-dasharray="1 1.8"/>
+  </svg>`
+}
+
+function emptyStateIconSvg() {
+  return `<svg class="lookup-empty-icon" width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.5"
+      stroke-dasharray="2 2.8" stroke-linecap="round" fill="none"/>
+    <line x1="17.2" y1="17.2" x2="22" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
   </svg>`
 }
 
@@ -77,6 +85,7 @@ function renderLookups() {
   const navUp       = document.getElementById('nav-up')
   const navDown     = document.getElementById('nav-down')
   const navCount    = document.getElementById('nav-hint')
+  const recentCount = document.getElementById('recent-count')
 
   if (!lookupList) return
 
@@ -84,16 +93,18 @@ function renderLookups() {
   if (section) section.style.flex = ''
 
   const total = allLookups.length
+  if (recentCount) recentCount.textContent = total > 0 ? String(total) : ''
 
   if (total === 0) {
+    const mod = navigator.platform.toUpperCase().includes('MAC') ? '⌘B' : 'Ctrl+B'
     lookupList.innerHTML = `
       <div class="lookup-empty">
-        <span class="lookup-empty-icon">∿</span>
-        <span class="lookup-empty-line1">no lookups yet</span>
-        <span class="lookup-empty-line2">press ${navigator.platform.toUpperCase().includes('MAC') ? '⌘B' : 'Ctrl+B'} while a video plays</span>
+        ${emptyStateIconSvg()}
+        <span class="lookup-empty-line1">No lookups yet</span>
+        <span class="lookup-empty-line2">Press ${mod} while a video plays</span>
       </div>`
-    if (lookupNav)  lookupNav.style.display = 'none'
-    if (section) section.style.flex = '0'
+    if (lookupNav) lookupNav.hidden = true
+    if (section) section.style.flex = '1'
     return
   }
 
@@ -103,7 +114,7 @@ function renderLookups() {
   const page    = allLookups.slice(pageOffset, pageOffset + PAGE_SIZE)
   const hasMore = total > PAGE_SIZE
 
-  if (lookupNav)  lookupNav.style.display = hasMore ? 'flex' : 'none'
+  if (lookupNav)  lookupNav.hidden = !hasMore
   if (navUp)      navUp.disabled   = pageOffset === 0
   if (navDown)    navDown.disabled = pageOffset >= maxOffset
   if (navCount)   navCount.textContent = `${pageOffset + 1}–${Math.min(pageOffset + PAGE_SIZE, total)} of ${total}`

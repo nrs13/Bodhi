@@ -22,23 +22,28 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/watch*"],
-      "js": ["content.js"],
-      "css": ["styles/fonts.css", "styles/widget.css"],
+      "matches": [
+        "*://*.youtube.com/watch*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles/widget.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
-        "fonts/Doto-Regular.ttf",
-        "fonts/Doto-Bold.ttf",
-        "styles/fonts.css",
         "styles/widget.css",
         "dict/index.aff",
         "dict/index.dic"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "action": {

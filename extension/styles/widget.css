@@ -26,27 +26,31 @@
   --bodhi-space-4: 16px;
   --bodhi-space-5: 24px;
 
-  --bodhi-canvas: #F7F7F5;
+  --bodhi-canvas: #F4F6FA;
   --bodhi-surface: #FFFFFF;
-  --bodhi-ink: #141414;
-  --bodhi-ink-soft: #5C5C5C;
-  --bodhi-ink-faint: #8A8A8A;
-  --bodhi-line: #E6E6E4;
-  --bodhi-accent: #2F6FED;
-  --bodhi-hover: #F2F2F0;
+  --bodhi-ink: #12141A;
+  --bodhi-ink-soft: #5A6170;
+  --bodhi-ink-faint: #8B92A1;
+  --bodhi-line: #E2E6EE;
+  --bodhi-accent: #3B6CFF;
+  --bodhi-accent-soft: #E8EFFF;
+  --bodhi-signal: #14A37A;
+  --bodhi-caption: #5B6CFF;
+  --bodhi-search: #0F9B8E;
+  --bodhi-hover: #EEF1F7;
   --bodhi-scrim: rgba(255, 255, 255, 0.72);
-  --bodhi-shadow: 0 8px 28px rgba(20, 20, 20, 0.12);
+  --bodhi-shadow: 0 8px 28px rgba(18, 20, 26, 0.12);
 
-  /* legacy aliases used by older rules */
   --bodhi-ink-primary: var(--bodhi-ink);
   --bodhi-ink-body: var(--bodhi-ink);
   --bodhi-ink-secondary: var(--bodhi-ink-soft);
   --bodhi-ink-muted: var(--bodhi-ink-faint);
   --bodhi-ink-disabled: #A8A8A8;
-  --bodhi-ink-correction: #9A5B5B;
+  --bodhi-ink-correction: #C4785A;
 
-  --bodhi-font-display: 'Doto', sans-serif;
-  --bodhi-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bodhi-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --bodhi-font-display: var(--bodhi-font);
+  --bodhi-font-body: var(--bodhi-font);
 
   --bodhi-motion-open: 220ms;
   --bodhi-motion-close: 140ms;
@@ -74,18 +78,22 @@
 }
 
 .bodhi-widget[data-bodhi-theme='dark'] {
-  --bodhi-canvas: #121214;
-  --bodhi-surface: #1C1C1F;
-  --bodhi-ink: #F0F0F2;
-  --bodhi-ink-soft: #A0A0A6;
-  --bodhi-ink-faint: #7A7A82;
-  --bodhi-line: #2E2E32;
-  --bodhi-accent: #7BA3F7;
-  --bodhi-hover: #26262A;
-  --bodhi-scrim: rgba(28, 28, 31, 0.78);
+  --bodhi-canvas: #14161C;
+  --bodhi-surface: #1B1E26;
+  --bodhi-ink: #F1F3F7;
+  --bodhi-ink-soft: #A4ABB8;
+  --bodhi-ink-faint: #7A8290;
+  --bodhi-line: #2C313C;
+  --bodhi-accent: #7B9CFF;
+  --bodhi-accent-soft: #243056;
+  --bodhi-signal: #2DD4A8;
+  --bodhi-caption: #8B9BFF;
+  --bodhi-search: #2BC4B4;
+  --bodhi-hover: #252933;
+  --bodhi-scrim: rgba(27, 30, 38, 0.78);
   --bodhi-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
   --bodhi-ink-disabled: #6A6A72;
-  --bodhi-ink-correction: #C98989;
+  --bodhi-ink-correction: #E0A080;
 }
 
 .bodhi-widget.bodhi-widget-enter {
@@ -275,11 +283,11 @@
 }
 
 .bodhi-word {
-  font-family: var(--bodhi-font-display) !important;
-  font-size: 24px !important;
+  font-family: var(--bodhi-font) !important;
+  font-size: 22px !important;
   font-weight: 700 !important;
-  line-height: 1.15 !important;
-  letter-spacing: 0.02em !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
   color: var(--bodhi-ink) !important;
   margin: 0 !important;
   flex: 1 !important;
@@ -294,13 +302,27 @@
   width: 22px !important;
   height: 22px !important;
   margin-top: 2px !important;
-  color: var(--bodhi-ink-faint) !important;
+  color: var(--bodhi-caption) !important;
   border-radius: 5px !important;
 }
 
-.bodhi-method svg {
+.bodhi-method:has(.bodhi-method-search),
+.bodhi-method-search {
+  color: var(--bodhi-search) !important;
+}
+
+.bodhi-method:has(.bodhi-method-caption),
+.bodhi-method-caption {
+  color: var(--bodhi-caption) !important;
+}
+
+.bodhi-method svg,
+.bodhi-history-entry .bodhi-method-icon {
   color: inherit !important;
 }
+
+.bodhi-history-entry .bodhi-method-caption { color: var(--bodhi-caption) !important; }
+.bodhi-history-entry .bodhi-method-search { color: var(--bodhi-search) !important; }
 
 .bodhi-definition {
   font-family: var(--bodhi-font-body) !important;
@@ -319,10 +341,10 @@
 }
 
 .bodhi-search-link {
-  font-family: var(--bodhi-font-display) !important;
-  font-weight: 700 !important;
-  font-size: 11px !important;
-  color: var(--bodhi-ink-soft) !important;
+  font-family: var(--bodhi-font) !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: var(--bodhi-accent) !important;
   text-align: center !important;
   margin: 0 !important;
   cursor: pointer !important;
@@ -448,7 +470,7 @@
 }
 
 .bodhi-suggestions-label-text {
-  font-family: var(--bodhi-font-display) !important;
+  font-family: var(--bodhi-font) !important;
   font-weight: 700 !important;
   font-size: 10px !important;
   color: var(--bodhi-ink-faint) !important;
@@ -480,7 +502,7 @@
 }
 
 .bodhi-suggestion-word-correction {
-  font-family: var(--bodhi-font-display) !important;
+  font-family: var(--bodhi-font) !important;
   font-weight: 700 !important;
   font-size: 14px !important;
   color: var(--bodhi-ink-correction) !important;
@@ -548,7 +570,7 @@
 .bodhi-history-title {
   text-align: center !important;
   padding: 0 0 var(--bodhi-space-2) !important;
-  font-family: var(--bodhi-font-display) !important;
+  font-family: var(--bodhi-font) !important;
   font-weight: 700 !important;
   font-size: 11px !important;
   color: var(--bodhi-ink-soft) !important;
@@ -588,7 +610,7 @@
 }
 
 .bodhi-history-word {
-  font-family: var(--bodhi-font-display) !important;
+  font-family: var(--bodhi-font) !important;
   font-weight: 700 !important;
   font-size: 13px !important;
   flex: 1 !important;
@@ -616,7 +638,7 @@
 }
 
 .bodhi-unavailable-title {
-  font-family: var(--bodhi-font-display) !important;
+  font-family: var(--bodhi-font) !important;
   font-size: 15px !important;
   font-weight: 700 !important;
   color: var(--bodhi-ink) !important;

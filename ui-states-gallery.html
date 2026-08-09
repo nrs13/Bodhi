@@ -6,28 +6,18 @@
   <title>Bodhi — UI states gallery</title>
   <link rel="stylesheet" href="extension/styles/widget.css" />
   <style>
-    @font-face {
-      font-family: 'Doto';
-      src: url('extension/fonts/Doto-Regular.ttf') format('truetype');
-      font-weight: 400;
-    }
-    @font-face {
-      font-family: 'Doto';
-      src: url('extension/fonts/Doto-Bold.ttf') format('truetype');
-      font-weight: 700;
-    }
     :root {
-      --g-bg: #ECECE8;
-      --g-ink: #141414;
+      --g-bg: #E8ECF4;
+      --g-ink: #12141A;
     }
     html[data-gallery-scheme="dark"] {
-      --g-bg: #0A0A0C;
-      --g-ink: #F0F0F2;
+      --g-bg: #0B0D12;
+      --g-ink: #F1F3F7;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       background: var(--g-bg);
       color: var(--g-ink);
       padding: 24px;
@@ -40,10 +30,9 @@
       margin-bottom: 24px;
     }
     h1 {
-      font-family: 'Doto', sans-serif;
       font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 0.06em;
+      font-size: 20px;
+      letter-spacing: -0.02em;
       margin: 0;
     }
     .controls { display: flex; gap: 8px; align-items: center; }
@@ -55,8 +44,9 @@
       padding: 6px 10px;
       cursor: pointer;
       font-size: 12px;
+      font-weight: 500;
     }
-    .controls button.active { background: var(--g-ink); color: var(--g-bg); }
+    .controls button.active { background: #3B6CFF; border-color: #3B6CFF; color: #fff; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -65,7 +55,8 @@
     .card { display: flex; flex-direction: column; gap: 10px; }
     .label {
       font-size: 11px;
-      letter-spacing: 0.08em;
+      font-weight: 600;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       opacity: 0.65;
     }
@@ -74,7 +65,7 @@
       min-height: 220px;
       border-radius: 16px;
       background:
-        linear-gradient(135deg, rgba(47,111,237,0.12), transparent 40%),
+        linear-gradient(135deg, rgba(59,108,255,0.12), transparent 42%),
         repeating-linear-gradient(0deg, transparent, transparent 11px, rgba(127,127,127,0.08) 12px);
       padding: 20px;
       overflow: hidden;
@@ -121,11 +112,11 @@
         </div>
       </div>`
 
-    const caption = `<span class="bodhi-method" title="Found via captions">${/* caption glyph */''}
-      <svg width="13" height="11" viewBox="0 0 16 13" fill="none"><rect x="1" y="1" width="14" height="11" rx="2.5" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4" fill="none"/><line x1="5.5" y1="6.5" x2="10.5" y2="6.5" stroke="currentColor" stroke-width="1" stroke-dasharray="1 1.8"/><line x1="8" y1="4" x2="8" y2="9" stroke="currentColor" stroke-width="1" stroke-dasharray="1 1.8"/></svg>
+    const caption = `<span class="bodhi-method" title="Found via captions">
+      <svg class="bodhi-method-caption" width="13" height="11" viewBox="0 0 16 13" fill="none"><rect x="1" y="1" width="14" height="11" rx="2.5" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4" fill="none"/><line x1="5.5" y1="6.5" x2="10.5" y2="6.5" stroke="currentColor" stroke-width="1" stroke-dasharray="1 1.8"/><line x1="8" y1="4" x2="8" y2="9" stroke="currentColor" stroke-width="1" stroke-dasharray="1 1.8"/></svg>
     </span>`
     const search = `<span class="bodhi-method" title="Found via search">
-      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4" fill="none"/><line x1="9.3" y1="9.3" x2="12.8" y2="12.8" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.2 2"/></svg>
+      <svg class="bodhi-method-search" width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4" fill="none"/><line x1="9.3" y1="9.3" x2="12.8" y2="12.8" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.2 2"/></svg>
     </span>`
 
     const dots = (n, o) => `<div class="bodhi-skeleton-row">${Array.from({length:n},(_,i)=>`<div class="bodhi-skeleton-dot" style="animation-delay:${(o*4+i)*0.07}s"></div>`).join('')}</div>`
