@@ -73,11 +73,9 @@ function cleanDefinition(str = '') {
   return String(str).replace(/\s*\|\|+\s*$/g, '').trim()
 }
 
-function syncRecentSectionFlex() {
-  const section = document.getElementById('recent-section')
-  const body = document.getElementById('recent-body')
-  if (!section || !body) return
-  section.classList.toggle('is-open', body.classList.contains('open'))
+/** Nudge Chrome to recalculate popup window size after content toggles. */
+function nudgePopupHeight() {
+  void document.body.offsetHeight
 }
 
 function renderLookups() {
@@ -99,6 +97,7 @@ function renderLookups() {
         <span class="lookup-empty-line2">Press ${mod} while a video plays</span>
       </div>`
     kbActiveIdx = -1
+    nudgePopupHeight()
     return
   }
 
@@ -157,6 +156,7 @@ function renderLookups() {
   })
 
   if (listWrap && kbActiveIdx >= 0) scrollKbIntoView()
+  nudgePopupHeight()
 }
 
 function scrollKbIntoView() {
@@ -298,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setOsHotkeys()
   loadSettings()
   loadLookups()
-  syncRecentSectionFlex()
 
   wireToggle('toggle-enabled',     'enabled')
   wireToggle('toggle-autodismiss', 'autoDismiss')
@@ -311,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  function wireSection(headerId, bodyId, onToggle) {
+  function wireSection(headerId, bodyId) {
     const header = document.getElementById(headerId)
     const body   = document.getElementById(bodyId)
     if (!header || !body) return
@@ -319,14 +318,12 @@ document.addEventListener('DOMContentLoaded', () => {
     header.addEventListener('click', () => {
       const isOpen = body.classList.toggle('open')
       if (chev) chev.classList.toggle('open', isOpen)
-      if (typeof onToggle === 'function') onToggle(isOpen)
+      nudgePopupHeight()
     })
   }
   wireSection('shortcuts-header', 'shortcuts-body')
   wireSection('settings-header', 'settings-body')
-  wireSection('recent-header', 'recent-body', () => {
-    syncRecentSectionFlex()
-  })
+  wireSection('recent-header', 'recent-body')
 
   document.addEventListener('keydown', (e) => {
     const total = allLookups.length
