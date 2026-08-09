@@ -340,8 +340,8 @@
 
     /*
       Scroll containment: bordered shell clips; inner scrollport owns overflow.
-      No stable gutter — thin overlay thumb only appears when content overflows,
-      so short lists stay balanced without a dead right strip.
+      Thin thumb overlays the right edge — never reserve a classic gutter lane
+      (that was the empty strip beside the chevrons).
     */
     .lookup-list-wrap {
       box-sizing: border-box;
@@ -356,24 +356,45 @@
 
     .lookup-list-scroll {
       box-sizing: border-box;
+      width: 100%;
       max-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-gutter: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--bodhi-scroll-thumb) transparent;
+    }
+
+    /* Keep layout width; paint a 3px overlay thumb on the edge */
+    .lookup-list-scroll::-webkit-scrollbar {
+      width: 3px;
+      height: 3px;
+    }
+
+    .lookup-list-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .lookup-list-scroll::-webkit-scrollbar-thumb {
+      background-color: var(--bodhi-scroll-thumb);
+      border-radius: 999px;
     }
 
     .lookup-list {
       display: flex;
       flex-direction: column;
       gap: 2px;
-      padding: var(--bodhi-space-1);
+      width: 100%;
+      box-sizing: border-box;
+      padding: 3px;
     }
 
     .lookup-item {
       display: flex;
       flex-direction: column;
       width: 100%;
+      box-sizing: border-box;
       background: none;
       border: none;
       padding: 0;
@@ -389,8 +410,10 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--bodhi-space-2);
+      width: 100%;
+      box-sizing: border-box;
       min-height: calc(var(--bodhi-row-h) - 4px);
-      padding: 10px var(--bodhi-space-3);
+      padding: 10px 10px;
       border-radius: var(--bodhi-radius);
       border-left: 2px solid transparent;
       transition:
@@ -502,7 +525,7 @@
 
     .lookup-divider {
       height: 0;
-      margin: 0 var(--bodhi-space-3);
+      margin: 0 10px;
       border: none;
       border-top: 1px solid var(--bodhi-line);
     }
