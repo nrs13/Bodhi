@@ -89,9 +89,6 @@ function renderLookups() {
 
   if (!lookupList) return
 
-  const section = document.querySelector('.recent-section')
-  if (section) section.style.flex = ''
-
   const total = allLookups.length
   if (recentCount) recentCount.textContent = total > 0 ? String(total) : ''
 
@@ -104,7 +101,6 @@ function renderLookups() {
         <span class="lookup-empty-line2">Press ${mod} while a video plays</span>
       </div>`
     if (lookupNav) lookupNav.hidden = true
-    if (section) section.style.flex = '1'
     return
   }
 
@@ -355,6 +351,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let wheelCooldown = false
     listWrap.addEventListener('wheel', (e) => {
       const total = allLookups.length
+      // Prefer native scroll when the 5-row viewport overflows (e.g. expanded def).
+      const canScroll = listWrap.scrollHeight > listWrap.clientHeight + 1
+      if (canScroll) {
+        const atTop = listWrap.scrollTop <= 0
+        const atBottom = listWrap.scrollTop + listWrap.clientHeight >= listWrap.scrollHeight - 1
+        if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) return
+      }
       if (total <= PAGE_SIZE) return
       e.preventDefault()
       if (wheelCooldown) return

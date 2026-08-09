@@ -180,25 +180,52 @@
   box-sizing: border-box !important;
 }
 
-/* Toolbar: single flex row — fixes absolute X / history misalignment */
+/* Toolbar: one baseline row — history + X share edge padding */
 .bodhi-toolbar {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: var(--bodhi-space-2) !important;
-  margin: calc(-1 * var(--bodhi-space-1)) calc(-1 * var(--bodhi-space-1)) var(--bodhi-space-2) !important;
-  min-height: 28px !important;
+  gap: var(--bodhi-space-1) !important;
+  margin: 0 0 var(--bodhi-space-2) !important;
+  padding: 0 !important;
+  min-height: 24px !important;
+  line-height: 0 !important;
+}
+
+.bodhi-toolbar-left {
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+  min-width: 24px !important;
 }
 
 .bodhi-toolbar-spacer {
   flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.bodhi-toolbar-title {
+  flex: 1 !important;
+  min-width: 0 !important;
+  text-align: center !important;
+  font-family: var(--bodhi-font) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  line-height: 24px !important;
+  color: var(--bodhi-ink-soft) !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  pointer-events: none !important;
 }
 
 .bodhi-toolbar-actions {
   display: flex !important;
   align-items: center !important;
-  gap: var(--bodhi-space-1) !important;
+  justify-content: flex-end !important;
+  gap: 2px !important;
+  flex-shrink: 0 !important;
   margin-left: auto !important;
+  min-width: 24px !important;
 }
 
 .bodhi-close,
@@ -211,12 +238,13 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 28px !important;
-  height: 28px !important;
+  width: 24px !important;
+  height: 24px !important;
   padding: 0 !important;
   border-radius: 6px !important;
   color: var(--bodhi-ink-soft) !important;
   opacity: 1 !important;
+  line-height: 0 !important;
   transition: background-color var(--bodhi-motion-fast) var(--bodhi-ease), color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
 }
 
@@ -227,13 +255,15 @@
   color: var(--bodhi-ink) !important;
 }
 
-.bodhi-history-btn {
-  line-height: 0 !important;
+.bodhi-history-btn svg {
+  width: 18px !important;
+  height: 18px !important;
 }
 
-.bodhi-history-btn svg {
-  width: 20px !important;
-  height: 20px !important;
+.bodhi-close svg,
+.bodhi-back svg {
+  width: 14px !important;
+  height: 14px !important;
 }
 
 .bodhi-feedback {
@@ -371,6 +401,18 @@
   text-align: center !important;
   margin: 0 0 var(--bodhi-space-3) 0 !important;
   line-height: 1.45 !important;
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  border-bottom: none !important;
+}
+
+.bodhi-search-hint-em {
+  font: inherit !important;
+  font-weight: 600 !important;
+  color: var(--bodhi-ink) !important;
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  border-bottom: none !important;
 }
 
 .bodhi-search-wrap {
@@ -581,22 +623,31 @@
   text-transform: uppercase !important;
 }
 
+/* ~5 rows visible (entry ~36px), then scroll */
 .bodhi-history-list {
-  margin-top: var(--bodhi-space-2) !important;
-  max-height: 220px !important;
+  margin-top: var(--bodhi-space-1) !important;
+  max-height: 180px !important;
   overflow-y: auto !important;
-  scrollbar-width: none !important;
+  overscroll-behavior: contain !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--bodhi-line) transparent !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar {
-  display: none !important;
+  width: 4px !important;
+}
+
+.bodhi-history-list::-webkit-scrollbar-thumb {
+  background: var(--bodhi-line) !important;
+  border-radius: 4px !important;
 }
 
 .bodhi-history-entry {
   display: flex !important;
   align-items: center !important;
   gap: var(--bodhi-space-2) !important;
-  padding: var(--bodhi-space-2) !important;
+  min-height: 36px !important;
+  padding: 6px var(--bodhi-space-2) !important;
   border-radius: 7px !important;
   cursor: pointer !important;
   transition: background var(--bodhi-motion-fast) var(--bodhi-ease) !important;

@@ -160,10 +160,11 @@
     }
 
     .recent-section {
-      flex: 1;
+      flex: 1 1 auto;
       min-height: 0;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .section-header {
@@ -177,6 +178,7 @@
       cursor: pointer;
       font: inherit;
       color: inherit;
+      flex-shrink: 0;
     }
 
     .section-header hr {
@@ -216,29 +218,30 @@
       color: var(--bodhi-ink);
     }
 
+    /* Collapsible sections — avoid grid 0fr/1fr + flex grow (caused SETTINGS/RECENT overlap) */
     .section-body {
-      display: grid;
-      grid-template-rows: 0fr;
-      transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
+      display: none;
     }
 
     .section-body.open {
-      grid-template-rows: 1fr;
+      display: block;
     }
 
     .section-body-inner {
-      overflow: hidden;
       min-height: 0;
     }
 
     #recent-body.open {
+      display: flex;
+      flex-direction: column;
       flex: 1 1 auto;
       min-height: 0;
+      overflow: hidden;
     }
 
     #recent-body.open > .section-body-inner {
-      height: 100%;
-      min-height: 160px;
+      flex: 1 1 auto;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -286,18 +289,28 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* ~5 lookup rows visible, then scroll (PAGE_SIZE = 5) */
     .lookup-list-wrap {
-      flex: 1;
-      min-height: 160px;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: 230px;
+      overflow-x: hidden;
       overflow-y: auto;
-      scrollbar-width: none;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: var(--bodhi-line) transparent;
       border: 1px solid var(--bodhi-line);
       border-radius: 12px;
       background: var(--bodhi-surface);
     }
 
     .lookup-list-wrap::-webkit-scrollbar {
-      display: none;
+      width: 4px;
+    }
+
+    .lookup-list-wrap::-webkit-scrollbar-thumb {
+      background: var(--bodhi-line);
+      border-radius: 4px;
     }
 
     .lookup-list {
@@ -428,8 +441,8 @@
       align-items: center;
       justify-content: center;
       gap: var(--bodhi-space-2);
-      padding: var(--bodhi-space-5) var(--bodhi-space-4);
-      min-height: 140px;
+      padding: var(--bodhi-space-4);
+      min-height: 120px;
       animation: bodhi-fade-in 0.28s var(--bodhi-ease) both;
       text-align: center;
     }
@@ -709,31 +722,6 @@
       </div>
     </section>
 
-    <section class="recent-section">
-      <button type="button" class="section-header" id="recent-header">
-        <hr>
-        <span class="section-title">recent</span>
-        <span class="section-count" id="recent-count"></span>
-        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <hr>
-      </button>
-      <div class="section-body open" id="recent-body">
-        <div class="section-body-inner">
-          <div class="lookup-list-wrap" id="lookup-list-wrap">
-            <div class="lookup-list" id="lookup-list"></div>
-          </div>
-          <div id="lookup-fade" class="lookup-fade" hidden></div>
-          <div class="recent-nav" id="recent-nav" hidden>
-            <button type="button" class="nav-btn" id="nav-up" disabled>prev</button>
-            <span class="nav-hint" id="nav-hint"></span>
-            <button type="button" class="nav-btn" id="nav-down">next</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="settings-section">
       <button type="button" class="section-header" id="settings-header">
         <hr>
@@ -784,6 +772,31 @@
                 <button type="button" data-theme="dark">Dark</button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="recent-section">
+      <button type="button" class="section-header" id="recent-header">
+        <hr>
+        <span class="section-title">recent</span>
+        <span class="section-count" id="recent-count"></span>
+        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <hr>
+      </button>
+      <div class="section-body open" id="recent-body">
+        <div class="section-body-inner">
+          <div class="lookup-list-wrap" id="lookup-list-wrap">
+            <div class="lookup-list" id="lookup-list"></div>
+          </div>
+          <div id="lookup-fade" class="lookup-fade" hidden></div>
+          <div class="recent-nav" id="recent-nav" hidden>
+            <button type="button" class="nav-btn" id="nav-up" disabled>prev</button>
+            <span class="nav-hint" id="nav-hint"></span>
+            <button type="button" class="nav-btn" id="nav-down">next</button>
           </div>
         </div>
       </div>

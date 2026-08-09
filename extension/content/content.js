@@ -365,7 +365,7 @@ function methodBadgeHtml(source) {
   return `<span class="bodhi-method" title="${title}" aria-label="${title}">${icon}</span>`
 }
 
-function toolbarHtml({ showHistory = false, showBack = false } = {}) {
+function toolbarHtml({ showHistory = false, showBack = false, title = '' } = {}) {
   return `
     <div class="bodhi-toolbar">
       <div class="bodhi-toolbar-left">
@@ -378,7 +378,9 @@ function toolbarHtml({ showHistory = false, showBack = false } = {}) {
           </svg>
         </button>` : ''}
       </div>
-      <div class="bodhi-toolbar-spacer"></div>
+      ${title
+        ? `<div class="bodhi-toolbar-title">${title}</div>`
+        : `<div class="bodhi-toolbar-spacer"></div>`}
       <div class="bodhi-toolbar-actions">
         ${showHistory ? `<button class="bodhi-history-btn" data-action="open-history" title="Session history" aria-label="Session history">
           ${historyClockSvg()}
@@ -392,6 +394,127 @@ function toolbarHtml({ showHistory = false, showBack = false } = {}) {
       </div>
     </div>
   `
+}
+
+function historyViewHtml(history, currentWordId) {
+  return `
+    <div class="bodhi-history-view is-hidden">
+      ${toolbarHtml({ showBack: true, title: 'session history' })}
+      <svg class="bodhi-divider" height="10" viewBox="0 0 240 10" preserveAspectRatio="none">
+        <line x1="0" y1="5" x2="240" y2="5"
+          stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-dasharray="2 5.5"/>
+      </svg>
+      <div class="bodhi-history-list">
+        ${buildHistoryView(history || [], currentWordId)}
+      </div>
+    </div>
+  `
+}
+
+function formatSearchHint(message) {
+  const text = String(message || '')
+  // Keep "search it." un-underlined even if host-page link styles leak in.
+  if (text.includes('search it.')) {
+    return text.replace(
+      'search it.',
+      '<span class="bodhi-search-hint-em">search it.</span>',
+    )
+  }
+  return text
+}
+
+function attachHistoryHandlers(widget, { onSelectEntry } = {}) {
+  widget.querySelectorAll('.bodhi-close').forEach((btn) => {
+    btn.addEventListener('click', () => { hideWidget(); clearSession() })
+  })
+
+  const backBtn = widget.querySelector('.bodhi-back')
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      swapInnerViews(
+        widget.querySelector('.bodhi-history-view'),
+        widget.querySelector('.bodhi-main-view'),
+      )
+    })
+  }
+
+  const historyBtn = widget.querySelector('[data-action="open-history"]')
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      spinClockHands(historyBtn)
+      swapInnerViews(
+        widget.querySelector('.bodhi-main-view'),
+        widget.querySelector('.bodhi-history-view'),
+      )
+    })
+  }
+
+  widget.querySelectorAll('.bodhi-history-entry').forEach((entry) => {
+    entry.addEventListener('click', () => {
+      const payload = {
+        word: entry.dataset.word,
+        pos: entry.dataset.pos || '',
+        definition: decodeURIComponent(entry.dataset.def || ''),
+        source: entry.dataset.source === 'search' ? 'search' : 'hotkey',
+      }
+      if (!payload.word || !payload.definition) return
+
+      if (typeof onSelectEntry === 'function') {
+        onSelectEntry(payload)
+        return
+      }
+
+      if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+      if (settings.autoDismiss) {
+        autoDismissTimer = setTimeout(() => { if (widgetInstance === widget) hideWidget() }, 6500)
+      }
+      const wordEl = widget.querySelector('.bodhi-main-view .bodhi-selectable')
+      const posEl = widget.querySelector('.bodhi-main-view .bodhi-pos')
+      const defEl = widget.querySelector('.bodhi-main-view .bodhi-definition')
+      const methodEl = widget.querySelector('.bodhi-main-view .bodhi-method')
+      if (wordEl) wordEl.textContent = payload.word
+      if (posEl) posEl.textContent = payload.pos
+      if (defEl) defEl.textContent = payload.definition
+      if (methodEl) methodEl.outerHTML = methodBadgeHtml(payload.source)
+      swapInnerViews(
+        widget.querySelector('.bodhi-history-view'),
+        widget.querySelector('.bodhi-main-view'),
+      )
+    })
+  })
+
+  const historyList = widget.querySelector('.bodhi-history-list')
+  if (historyList) {
+    let activeHistoryIdx = -1
+    const getEntries = () => Array.from(historyList.querySelectorAll('.bodhi-history-entry'))
+
+    historyList.addEventListener('keydown', (e) => {
+      const entries = getEntries()
+      if (!entries.length) return
+      if (e.key === 'ArrowDown') {
+        e.preventDefault(); e.stopPropagation()
+        activeHistoryIdx = Math.min(activeHistoryIdx + 1, entries.length - 1)
+        entries.forEach((el, i) => el.classList.toggle('bodhi-suggestion-active', i === activeHistoryIdx))
+        entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); e.stopPropagation()
+        activeHistoryIdx = Math.max(activeHistoryIdx - 1, 0)
+        entries.forEach((el, i) => el.classList.toggle('bodhi-suggestion-active', i === activeHistoryIdx))
+        entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
+      } else if (e.key === 'Enter' && activeHistoryIdx >= 0) {
+        e.preventDefault(); e.stopPropagation()
+        entries[activeHistoryIdx]?.click()
+      }
+    })
+
+    historyList.setAttribute('tabindex', '0')
+    if (historyBtn) {
+      historyBtn.addEventListener('click', () => {
+        setTimeout(() => { historyList.focus() }, 50)
+      })
+    }
+  }
 }
 
 function spinClockHands(btn) {
@@ -726,6 +849,10 @@ async function showSkeleton() {
 
 async function showSearchResult(word, partOfSpeech, definition) {
   await hideWidget()
+  const history = await loadVideoHistory()
+  const showHistoryBtn = history.length > 0
+  const currentWordId = history.length > 0 ? history[0].id : null
+
   const widget = document.createElement('div')
   widget.className = 'bodhi-widget'
   const position = getStoredPosition() || getDefaultPosition()
@@ -733,23 +860,24 @@ async function showSearchResult(word, partOfSpeech, definition) {
   widget.style.left = position.left + 'px'
 
   widget.innerHTML = `
-    ${toolbarHtml()}
-    <div class="bodhi-panel">
-      <div class="bodhi-word-row">
-        <div class="bodhi-word"><span>${word}</span></div>
-        ${methodBadgeHtml('search')}
-      </div>
-      ${partOfSpeech ? `<div class="bodhi-pos">${partOfSpeech}</div>` : ''}
-      <div class="bodhi-definition">${definition}</div>
-      <div class="bodhi-footer-link">
-        <button class="bodhi-search-link" data-action="search-another">search another →</button>
+    <div class="bodhi-main-view">
+      ${toolbarHtml({ showHistory: showHistoryBtn })}
+      <div class="bodhi-panel">
+        <div class="bodhi-word-row">
+          <div class="bodhi-word"><span class="bodhi-selectable">${word}</span></div>
+          ${methodBadgeHtml('search')}
+        </div>
+        ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
+        <div class="bodhi-definition bodhi-selectable">${definition}</div>
+        <div class="bodhi-footer-link">
+          <button class="bodhi-search-link" data-action="search-another">search another →</button>
+        </div>
       </div>
     </div>
+    ${historyViewHtml(history, currentWordId)}
   `
 
-  const closeBtn = widget.querySelector('.bodhi-close')
-  if (closeBtn) closeBtn.addEventListener('click', () => { hideWidget(); clearSession() })
-
+  attachHistoryHandlers(widget)
   const searchLink = widget.querySelector('[data-action="search-another"]')
   if (searchLink) searchLink.addEventListener('click', () => showSearchBox('still curious? search it.'))
 
@@ -760,6 +888,9 @@ async function showSearchResult(word, partOfSpeech, definition) {
 async function showSearchBox(message) {
   session.status = 'search'
   await hideWidget()
+  const history = await loadVideoHistory()
+  const showHistoryBtn = history.length > 0
+
   const widget = document.createElement('div')
   widget.className = 'bodhi-widget bodhi-search-expanded'
   const position = getStoredPosition() || getDefaultPosition()
@@ -767,16 +898,22 @@ async function showSearchBox(message) {
   widget.style.left = position.left + 'px'
 
   widget.innerHTML = `
-    ${toolbarHtml()}
-    <div class="bodhi-panel">
-      <p class="bodhi-search-hint">${message}</p>
-      ${buildSearchBoxHtml()}
+    <div class="bodhi-main-view">
+      ${toolbarHtml({ showHistory: showHistoryBtn })}
+      <div class="bodhi-panel">
+        <p class="bodhi-search-hint">${formatSearchHint(message)}</p>
+        ${buildSearchBoxHtml()}
+      </div>
     </div>
+    ${historyViewHtml(history, null)}
   `
 
-  const closeBtn = widget.querySelector('.bodhi-close')
-  if (closeBtn) closeBtn.addEventListener('click', () => { hideWidget(); clearSession() })
-
+  attachHistoryHandlers(widget, {
+    onSelectEntry: async ({ word, pos, definition, source }) => {
+      const updated = await loadVideoHistory()
+      showWidget(word, pos, definition, 'success', updated, null, null, source)
+    },
+  })
   attachSearchHandlers(widget)
   makeDraggable(widget)
   mountWidget(widget)
@@ -865,111 +1002,11 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
     `
   }
 
-  const historyViewHtml = `
-    <div class="bodhi-history-view is-hidden">
-      ${toolbarHtml({ showBack: true })}
-      <div class="bodhi-history-title">session history</div>
-      <svg class="bodhi-divider" height="10" viewBox="0 0 240 10" preserveAspectRatio="none">
-        <line x1="0" y1="5" x2="240" y2="5"
-          stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-dasharray="2 5.5"/>
-      </svg>
-      <div class="bodhi-history-list">
-        ${buildHistoryView(history || [], currentWordId)}
-      </div>
-    </div>
-  `
-
   const wrapper = document.createElement('div')
-  wrapper.innerHTML = `<div class="bodhi-main-view">${content}</div>${historyViewHtml}`
+  wrapper.innerHTML = `<div class="bodhi-main-view">${content}</div>${historyViewHtml(history, currentWordId)}`
   while (wrapper.firstChild) widget.appendChild(wrapper.firstChild)
 
-  widget.querySelectorAll('.bodhi-close').forEach(btn => {
-    btn.addEventListener('click', () => { hideWidget(); clearSession() })
-  })
-
-  const backBtn = widget.querySelector('.bodhi-back')
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      swapInnerViews(
-        widget.querySelector('.bodhi-history-view'),
-        widget.querySelector('.bodhi-main-view'),
-      )
-    })
-    backBtn.addEventListener('mouseenter', () => { backBtn.style.opacity = '1' })
-    backBtn.addEventListener('mouseleave', () => { backBtn.style.opacity = '0.55' })
-  }
-
-  const historyBtn = widget.querySelector('[data-action="open-history"]')
-  if (historyBtn) {
-    historyBtn.addEventListener('click', () => {
-      spinClockHands(historyBtn)
-      swapInnerViews(
-        widget.querySelector('.bodhi-main-view'),
-        widget.querySelector('.bodhi-history-view'),
-      )
-    })
-  }
-
-  widget.querySelectorAll('.bodhi-history-entry').forEach(entry => {
-    entry.addEventListener('click', () => {
-      if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
-      if (settings.autoDismiss) {
-        autoDismissTimer = setTimeout(() => { if (widgetInstance === widget) hideWidget() }, 6500)
-      }
-      const w = entry.dataset.word
-      const p = entry.dataset.pos
-      const d = decodeURIComponent(entry.dataset.def)
-      const src = entry.dataset.source === 'search' ? 'search' : 'hotkey'
-      if (w && d) {
-        const wordEl = widget.querySelector('.bodhi-main-view .bodhi-selectable')
-        const posEl = widget.querySelector('.bodhi-main-view .bodhi-pos')
-        const defEl = widget.querySelector('.bodhi-main-view .bodhi-definition')
-        const methodEl = widget.querySelector('.bodhi-main-view .bodhi-method')
-        if (wordEl) wordEl.textContent = w
-        if (posEl) posEl.textContent = p
-        if (defEl) defEl.textContent = d
-        if (methodEl) methodEl.outerHTML = methodBadgeHtml(src)
-        swapInnerViews(
-          widget.querySelector('.bodhi-history-view'),
-          widget.querySelector('.bodhi-main-view'),
-        )
-      }
-    })
-  })
-
-  const historyList = widget.querySelector('.bodhi-history-list')
-  if (historyList) {
-    let activeHistoryIdx = -1
-    const getEntries = () => Array.from(historyList.querySelectorAll('.bodhi-history-entry'))
-
-    historyList.addEventListener('keydown', (e) => {
-      const entries = getEntries()
-      if (!entries.length) return
-      if (e.key === 'ArrowDown') {
-        e.preventDefault(); e.stopPropagation()
-        activeHistoryIdx = Math.min(activeHistoryIdx + 1, entries.length - 1)
-        entries.forEach((el, i) => el.classList.toggle('bodhi-suggestion-active', i === activeHistoryIdx))
-        entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault(); e.stopPropagation()
-        activeHistoryIdx = Math.max(activeHistoryIdx - 1, 0)
-        entries.forEach((el, i) => el.classList.toggle('bodhi-suggestion-active', i === activeHistoryIdx))
-        entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
-      } else if (e.key === 'Enter' && activeHistoryIdx >= 0) {
-        e.preventDefault(); e.stopPropagation()
-        entries[activeHistoryIdx]?.click()
-      }
-    })
-
-    historyList.setAttribute('tabindex', '0')
-    const historyBtn = widget.querySelector('[data-action="open-history"]')
-    if (historyBtn) {
-      historyBtn.addEventListener('click', () => {
-        setTimeout(() => { historyList.focus() }, 50)
-      })
-    }
-  }
+  attachHistoryHandlers(widget)
 
   const nextBtn = widget.querySelector('[data-feedback="next"]')
   if (nextBtn) {
