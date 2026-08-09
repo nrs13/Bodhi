@@ -174,15 +174,6 @@ function renderLookups() {
 
   lookupList.innerHTML = html
 
-  const syncStandClasses = () => {
-    lookupList.querySelectorAll('.lookup-row').forEach((row) => {
-      const i = parseInt(row.dataset.idx, 10)
-      const on = i === kbActiveIdx
-      row.classList.toggle('is-stand', on)
-      row.setAttribute('aria-selected', on ? 'true' : 'false')
-    })
-  }
-
   lookupList.querySelectorAll('.lookup-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx, 10)
@@ -193,15 +184,7 @@ function renderLookups() {
     })
   })
 
-  // Pointer moves the listbox cursor (same as ↑↓) without collapsing expand state
-  lookupList.addEventListener('pointerover', (e) => {
-    const row = e.target.closest?.('.lookup-row')
-    if (!row || !lookupList.contains(row)) return
-    const idx = parseInt(row.dataset.idx, 10)
-    if (Number.isNaN(idx) || idx === kbActiveIdx) return
-    kbActiveIdx = idx
-    syncStandClasses()
-  })
+  // Hover is CSS-only. Stand moves on click / ↑↓ only (standard listbox).
 
   if (listScroll && kbActiveIdx >= 0) scrollKbIntoView()
   nudgePopupHeight()

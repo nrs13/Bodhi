@@ -760,7 +760,8 @@
   display: flex !important;
   flex-direction: column !important;
   gap: var(--bodhi-space-1) !important;
-  padding: 2px !important;
+  /* Equal inset on all sides — first/last rows match left/right */
+  padding: 8px !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar {

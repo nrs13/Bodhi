@@ -387,13 +387,14 @@
       gap: 2px;
       width: 100%;
       box-sizing: border-box;
-      padding: 3px;
+      /* Equal inset on all sides — first/last rows match left/right breathing room */
+      padding: 8px;
     }
 
     /*
       One unit per word: header + def share the same width/card.
-      Stand (↑↓ / pointer) = industry listbox cursor on the whole unit.
-      Hover (without stand) = quieter wash. Expanded def is flush, not inset.
+      Hover = CSS only. Stand (listbox cursor) = click or ↑↓ only —
+      parked mouse must not trap the cursor on one row.
     */
     .lookup-row {
       display: flex;

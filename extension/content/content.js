@@ -711,14 +711,7 @@ function bindHistoryListInteractions(widget, historyList) {
     toggleHistoryRowExpand(row, historyList)
   }, true)
 
-  // Pointer stand = same cue as ↑↓ (standard listbox “where am I”)
-  historyList.addEventListener('pointerover', (e) => {
-    const entry = e.target.closest?.('.bodhi-history-entry')
-    if (!entry || !historyList.contains(entry)) return
-    const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
-    const idx = rows.indexOf(entry.closest('.bodhi-history-row'))
-    if (idx >= 0 && idx !== activeHistoryIdx) standOn(idx)
-  })
+  // Hover is CSS-only. Stand moves on click / ↑↓ only (standard listbox).
 
   historyList.addEventListener('keydown', (e) => {
     const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
