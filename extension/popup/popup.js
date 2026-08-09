@@ -2,6 +2,23 @@ let allLookups  = []
 let expandedIdx = null
 let kbActiveIdx = -1
 let settings    = { enabled: true, autoDismiss: true, spellCheck: true, autoEnableCaptions: true }
+
+/** Match content script retention: 30 days / 200 per video. */
+const HISTORY_MAX_ENTRIES = 200
+const HISTORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+
+function pruneLookupEntries(entries) {
+  const cutoff = Date.now() - HISTORY_MAX_AGE_MS
+  return (Array.isArray(entries) ? entries : [])
+    .filter((e) => {
+      if (!e || !e.word) return false
+      const ts = e.timestamp || e.ts
+      if (!ts) return true
+      return ts >= cutoff
+    })
+    .sort((a, b) => (b.timestamp || b.ts || 0) - (a.timestamp || a.ts || 0))
+    .slice(0, HISTORY_MAX_ENTRIES)
+}
 /** @type {'system' | 'light' | 'dark'} */
 let themePref = 'system'
 let systemDarkMq = null
@@ -37,21 +54,22 @@ function syncThemeSeg() {
 }
 
 function methodIconSvg(source) {
+  // Solid strokes in the recent list — dashed motif was reading as garbled fragments
   if (source === 'search') {
     return `<svg class="method-icon search" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.1"
-        stroke-dasharray="1.5 2.4" stroke-linecap="round" fill="none"/>
+        stroke-linecap="round" fill="none"/>
       <line x1="9.3" y1="9.3" x2="12.8" y2="12.8" stroke="currentColor" stroke-width="1.1"
-        stroke-linecap="round" stroke-dasharray="1.2 2"/>
+        stroke-linecap="round"/>
     </svg>`
   }
   return `<svg class="method-icon caption" width="13" height="11" viewBox="0 0 16 13" fill="none" aria-hidden="true">
     <rect x="1" y="1" width="14" height="11" rx="2.5" stroke="currentColor" stroke-width="1.1"
-      stroke-dasharray="1.5 2.4" stroke-linecap="round" fill="none"/>
+      stroke-linecap="round" fill="none"/>
     <line x1="5.5" y1="6.5" x2="10.5" y2="6.5" stroke="currentColor" stroke-width="1"
-      stroke-linecap="round" stroke-dasharray="1 1.8"/>
+      stroke-linecap="round"/>
     <line x1="8" y1="4" x2="8" y2="9" stroke="currentColor" stroke-width="1"
-      stroke-linecap="round" stroke-dasharray="1 1.8"/>
+      stroke-linecap="round"/>
   </svg>`
 }
 
@@ -256,10 +274,12 @@ function loadLookups() {
 
     if (videoId) {
       chrome.storage.local.get([`bodhi_history_${videoId}`], (result) => {
-        allLookups = result[`bodhi_history_${videoId}`] || []
+        // Durable per-video history (chrome.storage.local) — survives refresh
+        allLookups = pruneLookupEntries(result[`bodhi_history_${videoId}`] || [])
         renderLookups()
       })
     } else {
+      // bodhi_session_keys = durable index of video history keys (not tab-session)
       chrome.storage.local.get(['bodhi_session_keys'], (res) => {
         const sessionKeys = res.bodhi_session_keys || []
         if (sessionKeys.length === 0) { allLookups = []; renderLookups(); return }
@@ -268,8 +288,7 @@ function loadLookups() {
           sessionKeys.forEach(k => {
             if (Array.isArray(data[k])) entries.push(...data[k])
           })
-          entries.sort((a, b) => (b.ts || b.timestamp || 0) - (a.ts || a.timestamp || 0))
-          allLookups = entries
+          allLookups = pruneLookupEntries(entries)
           renderLookups()
         })
       })

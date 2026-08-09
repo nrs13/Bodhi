@@ -154,10 +154,11 @@
     [data-bodhi-tip]::after {
       content: attr(data-bodhi-tip);
       position: absolute;
-      /* Right of icon — stays inside overflow:hidden list shells */
-      left: calc(100% + 8px);
-      top: 50%;
-      transform: translateY(-50%) translateX(-4px);
+      /* Above icon — must not cover sibling word text */
+      left: 50%;
+      bottom: calc(100% + 6px);
+      top: auto;
+      transform: translateX(-50%) translateY(3px);
       padding: 5px 8px;
       border-radius: var(--bodhi-radius);
       background: var(--bodhi-ink);
@@ -169,6 +170,7 @@
       letter-spacing: 0.01em;
       white-space: nowrap;
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
       transition:
         opacity var(--bodhi-motion-fast) var(--bodhi-ease),
@@ -179,7 +181,8 @@
     [data-bodhi-tip]:hover::after,
     [data-bodhi-tip]:focus-visible::after {
       opacity: 1;
-      transform: translateY(-50%) translateX(0);
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
     }
 
     .header-logo-row {
