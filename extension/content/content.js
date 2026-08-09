@@ -220,15 +220,68 @@ function getSuggestions(query, callback) {
 let widgetInstance = null
 let isProcessing = false
 let autoDismissTimer = null
-
-function resetAutoDismiss(duration) {
-  if (!settings.autoDismiss) return
-  if (autoDismissTimer) clearTimeout(autoDismissTimer)
-  autoDismissTimer = setTimeout(() => {
-    hideWidget()
-  }, duration || 6500)
-}
+let historyViewActive = false
 let lastTextWindow = null
+
+function cleanDefinition(str = '') {
+  return String(str).replace(/\s*\|\|+\s*$/g, '').trim()
+}
+
+function isHistoryViewOpen(widget = widgetInstance) {
+  if (historyViewActive) return true
+  const hv = widget?.querySelector?.('.bodhi-history-view')
+  return !!(hv && !hv.classList.contains('is-hidden'))
+}
+
+function clearAutoDismiss() {
+  if (autoDismissTimer) {
+    clearTimeout(autoDismissTimer)
+    autoDismissTimer = null
+  }
+}
+
+function scheduleAutoDismiss(duration = 6500) {
+  clearAutoDismiss()
+  if (!settings.autoDismiss) return
+  if (!widgetInstance) return
+  if (isHistoryViewOpen(widgetInstance)) return
+  const captured = widgetInstance
+  autoDismissTimer = setTimeout(() => {
+    if (widgetInstance === captured) hideWidget()
+  }, duration)
+}
+
+function pauseAutoDismiss() {
+  clearAutoDismiss()
+}
+
+function resumeAutoDismiss(duration = 6500) {
+  if (!settings.autoDismiss) return
+  if (!widgetInstance) return
+  if (isHistoryViewOpen(widgetInstance)) return
+  scheduleAutoDismiss(duration)
+}
+
+function wireAutoDismissGuards(widget) {
+  if (!widget) return
+
+  const pause = () => pauseAutoDismiss()
+  const resume = () => {
+    const duration = widget.querySelector('.bodhi-search-row') ? 8000 : 6500
+    resumeAutoDismiss(duration)
+  }
+
+  widget.addEventListener('mouseenter', pause)
+  widget.addEventListener('mouseleave', resume)
+  widget.addEventListener('focusin', pause)
+  widget.addEventListener('keydown', pause)
+  widget.addEventListener('wheel', pause, { passive: true })
+
+  const historyList = widget.querySelector('.bodhi-history-list')
+  if (historyList) {
+    historyList.addEventListener('scroll', pause, { passive: true })
+  }
+}
 
 const MAX_CANDIDATES = 15
 
@@ -400,11 +453,7 @@ function historyViewHtml(history, currentWordId) {
   return `
     <div class="bodhi-history-view is-hidden">
       ${toolbarHtml({ showBack: true, title: 'session history' })}
-      <svg class="bodhi-divider" height="10" viewBox="0 0 240 10" preserveAspectRatio="none">
-        <line x1="0" y1="5" x2="240" y2="5"
-          stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-dasharray="2 5.5"/>
-      </svg>
+      <div class="bodhi-divider" role="separator"></div>
       <div class="bodhi-history-list">
         ${buildHistoryView(history || [], currentWordId)}
       </div>
@@ -432,16 +481,22 @@ function attachHistoryHandlers(widget, { onSelectEntry } = {}) {
   const backBtn = widget.querySelector('.bodhi-back')
   if (backBtn) {
     backBtn.addEventListener('click', () => {
+      pauseAutoDismiss()
+      historyViewActive = false
       swapInnerViews(
         widget.querySelector('.bodhi-history-view'),
         widget.querySelector('.bodhi-main-view'),
       )
+      // Back to definition — generous idle window
+      setTimeout(() => resumeAutoDismiss(8000), MOTION_FAST_MS + 20)
     })
   }
 
   const historyBtn = widget.querySelector('[data-action="open-history"]')
   if (historyBtn) {
     historyBtn.addEventListener('click', () => {
+      pauseAutoDismiss()
+      historyViewActive = true
       spinClockHands(historyBtn)
       swapInnerViews(
         widget.querySelector('.bodhi-main-view'),
@@ -455,20 +510,19 @@ function attachHistoryHandlers(widget, { onSelectEntry } = {}) {
       const payload = {
         word: entry.dataset.word,
         pos: entry.dataset.pos || '',
-        definition: decodeURIComponent(entry.dataset.def || ''),
+        definition: cleanDefinition(decodeURIComponent(entry.dataset.def || '')),
         source: entry.dataset.source === 'search' ? 'search' : 'hotkey',
       }
       if (!payload.word || !payload.definition) return
+
+      pauseAutoDismiss()
+      historyViewActive = false
 
       if (typeof onSelectEntry === 'function') {
         onSelectEntry(payload)
         return
       }
 
-      if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
-      if (settings.autoDismiss) {
-        autoDismissTimer = setTimeout(() => { if (widgetInstance === widget) hideWidget() }, 6500)
-      }
       const wordEl = widget.querySelector('.bodhi-main-view .bodhi-selectable')
       const posEl = widget.querySelector('.bodhi-main-view .bodhi-pos')
       const defEl = widget.querySelector('.bodhi-main-view .bodhi-definition')
@@ -481,6 +535,7 @@ function attachHistoryHandlers(widget, { onSelectEntry } = {}) {
         widget.querySelector('.bodhi-history-view'),
         widget.querySelector('.bodhi-main-view'),
       )
+      setTimeout(() => scheduleAutoDismiss(8000), MOTION_FAST_MS + 20)
     })
   })
 
@@ -492,6 +547,7 @@ function attachHistoryHandlers(widget, { onSelectEntry } = {}) {
     historyList.addEventListener('keydown', (e) => {
       const entries = getEntries()
       if (!entries.length) return
+      pauseAutoDismiss()
       if (e.key === 'ArrowDown') {
         e.preventDefault(); e.stopPropagation()
         activeHistoryIdx = Math.min(activeHistoryIdx + 1, entries.length - 1)
@@ -573,9 +629,10 @@ function attachSearchHandlers(widget) {
   }
 
   const resetIdleTimer = () => {
-    if (autoDismissTimer) clearTimeout(autoDismissTimer)
+    pauseAutoDismiss()
     if (!settings.autoDismiss) return
-    autoDismissTimer = setTimeout(() => { hideWidget(); clearSession() }, 8000)
+    if (isHistoryViewOpen(widget)) return
+    scheduleAutoDismiss(8000)
   }
 
   const hideSuggestions = () => {
@@ -769,7 +826,7 @@ function buildHistoryView(history, currentWordId) {
 
     return `<div class="bodhi-history-entry ${isCurrent ? 'is-current' : ''}"
       data-word="${entry.word}" data-pos="${entry.pos || ''}"
-      data-def="${encodeURIComponent(entry.definition || '')}"
+      data-def="${encodeURIComponent(cleanDefinition(entry.definition || ''))}"
       data-source="${entry.source === 'search' ? 'search' : 'hotkey'}"
       title="${entry.source === 'hotkey' ? 'Looked up via ⌘B' : 'Looked up via search box'}">
       ${icon}
@@ -817,7 +874,7 @@ function swapInnerViews(fromEl, toEl) {
 }
 
 async function showSkeleton() {
-  if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+  clearAutoDismiss()
   await hideWidget()
   const widget = document.createElement('div')
   widget.className = 'bodhi-widget'
@@ -852,6 +909,7 @@ async function showSearchResult(word, partOfSpeech, definition) {
   const history = await loadVideoHistory()
   const showHistoryBtn = history.length > 0
   const currentWordId = history.length > 0 ? history[0].id : null
+  const cleanDef = cleanDefinition(definition)
 
   const widget = document.createElement('div')
   widget.className = 'bodhi-widget'
@@ -868,7 +926,7 @@ async function showSearchResult(word, partOfSpeech, definition) {
           ${methodBadgeHtml('search')}
         </div>
         ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
-        <div class="bodhi-definition bodhi-selectable">${definition}</div>
+        <div class="bodhi-definition bodhi-selectable">${cleanDef}</div>
         <div class="bodhi-footer-link">
           <button class="bodhi-search-link" data-action="search-another">search another →</button>
         </div>
@@ -878,11 +936,13 @@ async function showSearchResult(word, partOfSpeech, definition) {
   `
 
   attachHistoryHandlers(widget)
+  wireAutoDismissGuards(widget)
   const searchLink = widget.querySelector('[data-action="search-another"]')
   if (searchLink) searchLink.addEventListener('click', () => showSearchBox('still curious? search it.'))
 
   makeDraggable(widget)
   mountWidget(widget)
+  scheduleAutoDismiss(8000)
 }
 
 async function showSearchBox(message) {
@@ -911,10 +971,11 @@ async function showSearchBox(message) {
   attachHistoryHandlers(widget, {
     onSelectEntry: async ({ word, pos, definition, source }) => {
       const updated = await loadVideoHistory()
-      showWidget(word, pos, definition, 'success', updated, null, null, source)
+      showWidget(word, pos, cleanDefinition(definition), 'success', updated, null, null, source)
     },
   })
   attachSearchHandlers(widget)
+  wireAutoDismissGuards(widget)
   makeDraggable(widget)
   mountWidget(widget)
 }
@@ -947,7 +1008,7 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
 
   const nextBtnHtml = `
     <button class="bodhi-thumb" data-feedback="next" aria-label="Next word">
-      <svg class="bodhi-next-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg class="bodhi-next-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M 21 12 A 9 9 0 1 1 17 4.5"
           stroke="currentColor" stroke-width="1.5"
           stroke-linecap="round" stroke-dasharray="2 2.8" fill="none"/>
@@ -959,6 +1020,7 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
     </button>
   `
 
+  const cleanDef = cleanDefinition(definition)
   let content = ''
 
   if (state === 'unavailable') {
@@ -986,15 +1048,10 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
       </div>
       ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
       <div class="bodhi-definition bodhi-selectable">
-        ${definition}
+        ${cleanDef}
       </div>
       <div class="bodhi-feedback">
-        <svg class="bodhi-divider" height="10" viewBox="0 0 240 10"
-          xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-          <line x1="0" y1="5" x2="240" y2="5"
-            stroke="currentColor" stroke-width="1.8"
-            stroke-linecap="round" stroke-dasharray="2 5.5"/>
-        </svg>
+        <div class="bodhi-divider" role="separator"></div>
         <div class="bodhi-action-row">
           ${hasMoreWords() ? `${nextBtnHtml}` : `<button class="bodhi-search-link" data-action="open-search">search a word →</button>`}
         </div>
@@ -1007,13 +1064,14 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
   while (wrapper.firstChild) widget.appendChild(wrapper.firstChild)
 
   attachHistoryHandlers(widget)
+  wireAutoDismissGuards(widget)
 
   const nextBtn = widget.querySelector('[data-feedback="next"]')
   if (nextBtn) {
     nextBtn.addEventListener('click', async () => {
       if (nextBtn.dataset.spinning === 'true') return
       nextBtn.dataset.spinning = 'true'
-      if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+      pauseAutoDismiss()
 
       const svg = nextBtn.querySelector('svg')
       if (svg) {
@@ -1022,7 +1080,7 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
         svg.style.transition = 'transform 0.5s ease'; svg.style.transform = 'rotate(360deg)'
         svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', 'currentColor'))
         setTimeout(() => {
-          svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', '#CCCCCC'))
+          svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', 'currentColor'))
           nextBtn.dataset.spinning = 'false'
         }, 520)
       }
@@ -1036,8 +1094,6 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
         showSearchBox('still curious? search it.')
       }
     })
-    nextBtn.addEventListener('mouseenter', () => { nextBtn.style.backgroundColor = '#f8f9fa' })
-    nextBtn.addEventListener('mouseleave', () => { nextBtn.style.backgroundColor = 'transparent' })
   }
 
   widget.querySelectorAll('[data-action="open-search"]').forEach((searchLink) => {
@@ -1052,47 +1108,32 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
   })
 
   makeDraggable(widget)
-  
-  widget.addEventListener('mouseenter', () => {
-    if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
-  })
-  widget.addEventListener('mouseleave', () => {
-    if (!settings.autoDismiss) return
-    const duration = widget.querySelector('.bodhi-search-row') ? 8000 : 6500
-    autoDismissTimer = setTimeout(() => {
-      if (widgetInstance === widget) hideWidget()
-    }, duration)
-  })
-  
+
   return widget
 }
 
 async function showWidget(word, partOfSpeech, definition, widgetState, history = [], currentWordId = null, reason = null, source = 'hotkey') {
   if (!settings.enabled) return;
 
-  if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+  clearAutoDismiss()
   await hideWidget()
   const widget = createWidget(word, partOfSpeech, definition, widgetState, history, currentWordId, reason, source)
   mountWidget(widget)
 
-  if (settings.autoDismiss) {
-    const capturedInstance = widgetInstance
-    requestAnimationFrame(() => {
-      const duration = widgetState === 'success'
-        ? 6500
-        : widgetState === 'unavailable'
-          ? 10000
-          : 6000;
-      autoDismissTimer = setTimeout(() => {
-        if (widgetInstance === capturedInstance) hideWidget();
-      }, duration);
-    });
-  }
+  requestAnimationFrame(() => {
+    const duration = widgetState === 'success'
+      ? 6500
+      : widgetState === 'unavailable'
+        ? 10000
+        : 6000
+    scheduleAutoDismiss(duration)
+  })
 }
 
 function hideWidget() {
   return new Promise((resolve) => {
-    if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+    clearAutoDismiss()
+    historyViewActive = false
     const el = widgetInstance
     if (!el) {
       resolve()
@@ -1239,7 +1280,7 @@ function makeDraggable(element) {
     startX = e.clientX; startY = e.clientY
     initialLeft = element.offsetLeft; initialTop = element.offsetTop
 
-    if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
+    pauseAutoDismiss()
 
     element.classList.add('bodhi-widget-dragging')
     element.style.cursor = 'grabbing'
@@ -1270,15 +1311,10 @@ function makeDraggable(element) {
     document.removeEventListener('mousemove', drag)
     document.removeEventListener('mouseup', stopDrag)
 
-    if (!settings.autoDismiss) return
-
-    const capturedInstance = widgetInstance
     requestAnimationFrame(() => {
-      if (capturedInstance && capturedInstance.querySelector('.bodhi-skeleton')) return
-      const duration = capturedInstance && capturedInstance.querySelector('.bodhi-search-row') ? 8000 : 6000
-      autoDismissTimer = setTimeout(() => {
-        if (widgetInstance === capturedInstance) { hideWidget(); clearSession() }
-      }, duration)
+      if (widgetInstance && widgetInstance.querySelector('.bodhi-skeleton')) return
+      const duration = widgetInstance?.querySelector('.bodhi-search-row') ? 8000 : 6000
+      resumeAutoDismiss(duration)
     })
   }
 

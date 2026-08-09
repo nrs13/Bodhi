@@ -9,12 +9,6 @@
       from { stroke-dashoffset: 0; }
       to   { stroke-dashoffset: -44; }
     }
-    @keyframes bodhi-scanner {
-      0%   { transform: translateX(0); opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { transform: translateX(72px); opacity: 0; }
-    }
     @keyframes bodhi-fade-in {
       from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -37,7 +31,6 @@
       --bodhi-line: #E6E0D8;
       --bodhi-hover: #F1EBE4;
 
-      /* Oxidized copper + quiet role cues — not SaaS cobalt */
       --bodhi-accent: #9A6B4F;
       --bodhi-accent-soft: #F0E7DF;
       --bodhi-signal: #6A8F7B;
@@ -49,6 +42,9 @@
       --bodhi-motion-base: 220ms;
       --bodhi-ease: cubic-bezier(0.22, 1, 0.36, 1);
       --bodhi-shadow: 0 10px 32px rgba(18, 20, 26, 0.10);
+
+      --bodhi-row-h: 42px;
+      --bodhi-list-rows: 5;
     }
 
     html[data-bodhi-theme="dark"] {
@@ -144,26 +140,33 @@
       letter-spacing: 0.01em;
     }
 
+    /* Stack: shortcuts → recent (flex) → settings → footer */
     .body {
       flex: 1;
       min-height: 0;
-      padding: var(--bodhi-space-4);
+      padding: var(--bodhi-space-3) var(--bodhi-space-4);
       display: flex;
       flex-direction: column;
-      gap: var(--bodhi-space-4);
+      gap: var(--bodhi-space-3);
       overflow: hidden;
     }
 
     .shortcuts-section,
     .settings-section {
-      flex-shrink: 0;
+      flex: 0 0 auto;
     }
 
+    /* Recent grows only while its body is open — no phantom void when collapsed */
     .recent-section {
-      flex: 1 1 auto;
+      flex: 0 0 auto;
       min-height: 0;
       display: flex;
       flex-direction: column;
+    }
+
+    .recent-section.is-open {
+      flex: 1 1 auto;
+      min-height: 0;
       overflow: hidden;
     }
 
@@ -174,11 +177,20 @@
       width: 100%;
       background: none;
       border: none;
-      padding: 0 0 var(--bodhi-space-2);
+      outline: none;
+      box-shadow: none;
+      padding: var(--bodhi-space-1) 0;
       cursor: pointer;
       font: inherit;
       color: inherit;
       flex-shrink: 0;
+      border-radius: 0;
+    }
+
+    .section-header:focus-visible {
+      outline: 2px solid var(--bodhi-accent);
+      outline-offset: 2px;
+      border-radius: 6px;
     }
 
     .section-header hr {
@@ -186,6 +198,7 @@
       border: none;
       border-top: 1px solid var(--bodhi-line);
       margin: 0;
+      min-width: 12px;
     }
 
     .section-title {
@@ -218,7 +231,6 @@
       color: var(--bodhi-ink);
     }
 
-    /* Collapsible sections — avoid grid 0fr/1fr + flex grow (caused SETTINGS/RECENT overlap) */
     .section-body {
       display: none;
     }
@@ -229,6 +241,7 @@
 
     .section-body-inner {
       min-height: 0;
+      padding-top: var(--bodhi-space-1);
     }
 
     #recent-body.open {
@@ -245,6 +258,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      padding-top: var(--bodhi-space-1);
     }
 
     .shortcuts-list {
@@ -289,28 +303,35 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* ~5 lookup rows visible, then scroll (PAGE_SIZE = 5) */
+    /* ~5 rows visible; never collapses to 0 when recent is open */
     .lookup-list-wrap {
       flex: 1 1 auto;
-      min-height: 0;
-      max-height: 230px;
+      min-height: 168px; /* ~4 rows floor so words stay visible */
+      height: 100%;
+      max-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
+      scrollbar-gutter: stable;
       scrollbar-width: thin;
       scrollbar-color: var(--bodhi-line) transparent;
       border: 1px solid var(--bodhi-line);
       border-radius: 12px;
       background: var(--bodhi-surface);
+      padding-right: 2px;
     }
 
     .lookup-list-wrap::-webkit-scrollbar {
-      width: 4px;
+      width: 6px;
     }
 
     .lookup-list-wrap::-webkit-scrollbar-thumb {
       background: var(--bodhi-line);
       border-radius: 4px;
+    }
+
+    .lookup-list-wrap::-webkit-scrollbar-track {
+      background: transparent;
     }
 
     .lookup-list {
@@ -329,6 +350,7 @@
       text-align: left;
       font: inherit;
       color: inherit;
+      outline: none;
     }
 
     .lookup-item-inner {
@@ -336,7 +358,9 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--bodhi-space-2);
+      min-height: var(--bodhi-row-h);
       padding: 10px var(--bodhi-space-3);
+      padding-right: calc(var(--bodhi-space-3) + 2px);
       border-left: 2px solid transparent;
       transition:
         background var(--bodhi-motion-fast) var(--bodhi-ease),
@@ -344,9 +368,14 @@
     }
 
     .lookup-item.active .lookup-item-inner,
+    .lookup-item.kb-active .lookup-item-inner,
     .lookup-item:hover .lookup-item-inner {
       background: var(--bodhi-hover);
       border-left-color: var(--bodhi-line);
+    }
+
+    .lookup-item.kb-active .lookup-item-inner {
+      border-left-color: var(--bodhi-accent);
     }
 
     .lookup-item-left {
@@ -427,12 +456,10 @@
     }
 
     .lookup-divider {
+      height: 0;
       margin: 0 var(--bodhi-space-3);
-      color: var(--bodhi-line);
-    }
-
-    .lookup-divider svg line {
-      stroke: currentColor;
+      border: none;
+      border-top: 1px solid var(--bodhi-line);
     }
 
     .lookup-empty {
@@ -441,8 +468,8 @@
       align-items: center;
       justify-content: center;
       gap: var(--bodhi-space-2);
-      padding: var(--bodhi-space-4);
-      min-height: 120px;
+      padding: var(--bodhi-space-5) var(--bodhi-space-4);
+      min-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
       animation: bodhi-fade-in 0.28s var(--bodhi-ease) both;
       text-align: center;
     }
@@ -464,62 +491,6 @@
       font-size: 12px;
       color: var(--bodhi-ink-faint);
       max-width: 220px;
-    }
-
-    .lookup-fade {
-      height: var(--bodhi-space-4);
-      margin-top: calc(-1 * var(--bodhi-space-4));
-      pointer-events: none;
-      background: linear-gradient(to bottom, transparent, var(--bodhi-surface));
-      border-radius: 0 0 12px 12px;
-    }
-
-    .recent-nav {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--bodhi-space-3);
-      margin-top: var(--bodhi-space-2);
-      flex-shrink: 0;
-    }
-
-    .recent-nav[hidden],
-    .lookup-fade[hidden] {
-      display: none !important;
-    }
-
-    .nav-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--bodhi-space-1);
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: var(--bodhi-space-1) var(--bodhi-space-2);
-      border-radius: 6px;
-      font: inherit;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--bodhi-ink-faint);
-      transition:
-        color var(--bodhi-motion-fast) var(--bodhi-ease),
-        background var(--bodhi-motion-fast) var(--bodhi-ease);
-    }
-
-    .nav-btn:hover:not(:disabled) {
-      color: var(--bodhi-ink);
-      background: var(--bodhi-hover);
-    }
-
-    .nav-btn:disabled {
-      opacity: 0.35;
-      cursor: default;
-    }
-
-    .nav-hint {
-      font-size: 11px;
-      color: var(--bodhi-ink-faint);
-      font-variant-numeric: tabular-nums;
     }
 
     .settings-list {
@@ -628,43 +599,16 @@
       flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: var(--bodhi-space-3);
-      padding: var(--bodhi-space-3) var(--bodhi-space-4);
+      justify-content: center;
+      padding: 10px var(--bodhi-space-4);
       background: var(--bodhi-canvas);
       border-top: 1px solid var(--bodhi-line);
-    }
-
-    .footer-scanner {
-      position: relative;
-      width: 88px;
-      height: 10px;
-      flex-shrink: 0;
-      color: var(--bodhi-line);
-    }
-
-    .footer-scanner-dot {
-      position: absolute;
-      top: 50%;
-      left: 0;
-      width: 4px;
-      height: 4px;
-      margin-top: -2px;
-      border-radius: 50%;
-      background: var(--bodhi-signal);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .footer-scanner-dot.scanning {
-      opacity: 1;
-      animation: bodhi-scanner 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
     }
 
     .footer-tagline {
       font-size: 11px;
       color: var(--bodhi-ink-faint);
-      text-align: right;
+      text-align: center;
     }
   </style>
 </head>
@@ -722,16 +666,35 @@
       </div>
     </section>
 
-    <section class="settings-section">
-      <button type="button" class="section-header" id="settings-header">
+    <section class="recent-section is-open" id="recent-section">
+      <button type="button" class="section-header" id="recent-header">
         <hr>
-        <span class="section-title">settings</span>
+        <span class="section-title">recent</span>
+        <span class="section-count" id="recent-count"></span>
         <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
-      <div class="section-body open" id="settings-body">
+      <div class="section-body open" id="recent-body">
+        <div class="section-body-inner">
+          <div class="lookup-list-wrap" id="lookup-list-wrap" tabindex="0" role="listbox" aria-label="Recent lookups">
+            <div class="lookup-list" id="lookup-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <button type="button" class="section-header" id="settings-header">
+        <hr>
+        <span class="section-title">settings</span>
+        <svg class="section-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <hr>
+      </button>
+      <div class="section-body" id="settings-body">
         <div class="section-body-inner">
           <div class="settings-list">
             <div class="setting-row">
@@ -776,42 +739,9 @@
         </div>
       </div>
     </section>
-
-    <section class="recent-section">
-      <button type="button" class="section-header" id="recent-header">
-        <hr>
-        <span class="section-title">recent</span>
-        <span class="section-count" id="recent-count"></span>
-        <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <hr>
-      </button>
-      <div class="section-body open" id="recent-body">
-        <div class="section-body-inner">
-          <div class="lookup-list-wrap" id="lookup-list-wrap">
-            <div class="lookup-list" id="lookup-list"></div>
-          </div>
-          <div id="lookup-fade" class="lookup-fade" hidden></div>
-          <div class="recent-nav" id="recent-nav" hidden>
-            <button type="button" class="nav-btn" id="nav-up" disabled>prev</button>
-            <span class="nav-hint" id="nav-hint"></span>
-            <button type="button" class="nav-btn" id="nav-down">next</button>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="footer">
-    <div class="footer-scanner" aria-hidden="true">
-      <svg width="88" height="10" viewBox="0 0 88 10">
-        <line x1="0" y1="5" x2="88" y2="5"
-          stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-dasharray="2 5.5"/>
-      </svg>
-      <div class="footer-scanner-dot scanning" id="scanner-dot"></div>
-    </div>
     <span class="footer-tagline" id="footer-tagline">still curious? keep watching.</span>
   </footer>
 

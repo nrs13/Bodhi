@@ -1,8 +1,6 @@
-const PAGE_SIZE = 5
-
 let allLookups  = []
-let pageOffset  = 0
 let expandedIdx = null
+let kbActiveIdx = -1
 let settings    = { enabled: true, autoDismiss: true, spellCheck: true, autoEnableCaptions: true }
 /** @type {'system' | 'light' | 'dark'} */
 let themePref = 'system'
@@ -65,27 +63,27 @@ function emptyStateIconSvg() {
   </svg>`
 }
 
-function dottedDividerSvg() {
-  return `<svg style="width:100%;display:block;" height="10" viewBox="0 0 300 10" preserveAspectRatio="none">
-    <line x1="0" y1="5" x2="300" y2="5"
-      stroke="currentColor" stroke-width="1.5"
-      stroke-linecap="round" stroke-dasharray="2 5.5"/>
-  </svg>`
-}
-
 function escHtml(str = '') {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+function cleanDefinition(str = '') {
+  return String(str).replace(/\s*\|\|+\s*$/g, '').trim()
+}
+
+function syncRecentSectionFlex() {
+  const section = document.getElementById('recent-section')
+  const body = document.getElementById('recent-body')
+  if (!section || !body) return
+  section.classList.toggle('is-open', body.classList.contains('open'))
+}
+
 function renderLookups() {
   const lookupList  = document.getElementById('lookup-list')
-  const lookupNav   = document.getElementById('recent-nav')
-  const navUp       = document.getElementById('nav-up')
-  const navDown     = document.getElementById('nav-down')
-  const navCount    = document.getElementById('nav-hint')
   const recentCount = document.getElementById('recent-count')
+  const listWrap    = document.getElementById('lookup-list-wrap')
 
   if (!lookupList) return
 
@@ -100,27 +98,20 @@ function renderLookups() {
         <span class="lookup-empty-line1">No lookups yet</span>
         <span class="lookup-empty-line2">Press ${mod} while a video plays</span>
       </div>`
-    if (lookupNav) lookupNav.hidden = true
+    kbActiveIdx = -1
     return
   }
 
-  const maxOffset = Math.max(0, total - PAGE_SIZE)
-  if (pageOffset > maxOffset) pageOffset = maxOffset
-
-  const page    = allLookups.slice(pageOffset, pageOffset + PAGE_SIZE)
-  const hasMore = total > PAGE_SIZE
-
-  if (lookupNav)  lookupNav.hidden = !hasMore
-  if (navUp)      navUp.disabled   = pageOffset === 0
-  if (navDown)    navDown.disabled = pageOffset >= maxOffset
-  if (navCount)   navCount.textContent = `${pageOffset + 1}–${Math.min(pageOffset + PAGE_SIZE, total)} of ${total}`
+  if (kbActiveIdx >= total) kbActiveIdx = total - 1
 
   let html = ''
-  page.forEach((entry, i) => {
+  allLookups.forEach((entry, i) => {
     const isExpanded = expandedIdx === i
+    const isKb = kbActiveIdx === i
     const source = entry.source === 'search' ? 'search' : 'hotkey'
     const icon = methodIconSvg(source)
-    const hasdef = !!entry.definition
+    const definition = cleanDefinition(entry.definition)
+    const hasdef = !!definition
 
     const chevron = hasdef ? `
       <svg class="lookup-chevron${isExpanded ? ' open' : ''}"
@@ -131,7 +122,8 @@ function renderLookups() {
       </svg>` : ''
 
     html += `
-      <button class="lookup-item${isExpanded ? ' active' : ''}" data-page-idx="${i}"
+      <button type="button" class="lookup-item${isExpanded ? ' active' : ''}${isKb ? ' kb-active' : ''}"
+        data-idx="${i}" role="option" aria-selected="${isKb || isExpanded}"
         title="${source === 'search' ? 'Found via search' : 'Found via captions'}">
         <div class="lookup-item-inner">
           <div class="lookup-item-left">
@@ -145,22 +137,32 @@ function renderLookups() {
         </div>
       </button>
       ${hasdef ? `
-        <div class="lookup-def${isExpanded ? ' open' : ''}">
-          <p>${escHtml(entry.definition)}</p>
+        <div class="lookup-def${isExpanded ? ' open' : ''}" data-def-for="${i}">
+          <p>${escHtml(definition)}</p>
         </div>` : ''}
-      ${i < page.length - 1 ? `<div class="lookup-divider">${dottedDividerSvg()}</div>` : ''}
+      ${i < allLookups.length - 1 ? `<div class="lookup-divider" role="separator"></div>` : ''}
     `
   })
 
   lookupList.innerHTML = html
 
-  lookupList.querySelectorAll('.lookup-item').forEach(btn => {
+  lookupList.querySelectorAll('.lookup-item').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.pageIdx)
+      const idx = parseInt(btn.dataset.idx, 10)
+      kbActiveIdx = idx
       expandedIdx = expandedIdx === idx ? null : idx
       renderLookups()
+      scrollKbIntoView()
     })
   })
+
+  if (listWrap && kbActiveIdx >= 0) scrollKbIntoView()
+}
+
+function scrollKbIntoView() {
+  const listWrap = document.getElementById('lookup-list-wrap')
+  const active = listWrap?.querySelector('.lookup-item.kb-active')
+  if (active) active.scrollIntoView({ block: 'nearest' })
 }
 
 function applyToggle(btn, value) {
@@ -170,8 +172,6 @@ function applyToggle(btn, value) {
 }
 
 function persistSettings() {
-  // Write both formats: merged object (for content.js onChanged listener)
-  // AND three separate keys (for content.js loadSettings fallback)
   chrome.storage.local.set({
     bodhi_settings:            settings,
     bodhi_enabled:             settings.enabled,
@@ -192,7 +192,6 @@ function broadcastSetting(key, value) {
 function applyEnabledVisuals(value) {
   const headerCircle = document.getElementById('header-icon-circle')
   const headerLine   = document.getElementById('header-icon-line')
-  const scannerDot   = document.getElementById('scanner-dot')
   const footerTagline = document.getElementById('footer-tagline')
 
   if (headerCircle) {
@@ -200,7 +199,6 @@ function applyEnabledVisuals(value) {
     headerCircle.style.opacity   = value ? '1' : '0.45'
   }
   if (headerLine)     headerLine.style.opacity    = value ? '1' : '0.45'
-  if (scannerDot)     scannerDot.classList.toggle('scanning', value)
   if (footerTagline)  footerTagline.style.opacity  = value ? '1' : '0.5'
 }
 
@@ -300,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setOsHotkeys()
   loadSettings()
   loadLookups()
+  syncRecentSectionFlex()
 
   wireToggle('toggle-enabled',     'enabled')
   wireToggle('toggle-autodismiss', 'autoDismiss')
@@ -312,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  function wireSection(headerId, bodyId) {
+  function wireSection(headerId, bodyId, onToggle) {
     const header = document.getElementById(headerId)
     const body   = document.getElementById(bodyId)
     if (!header || !body) return
@@ -320,81 +319,36 @@ document.addEventListener('DOMContentLoaded', () => {
     header.addEventListener('click', () => {
       const isOpen = body.classList.toggle('open')
       if (chev) chev.classList.toggle('open', isOpen)
+      if (typeof onToggle === 'function') onToggle(isOpen)
     })
   }
-  wireSection('shortcuts-header',  'shortcuts-body')
-  wireSection('recent-header',     'recent-body')
-  wireSection('settings-header',   'settings-body')
-
-  const navUp   = document.getElementById('nav-up')
-  const navDown = document.getElementById('nav-down')
-
-  if (navUp) {
-    navUp.addEventListener('click', () => {
-      pageOffset  = Math.max(0, pageOffset - PAGE_SIZE)
-      expandedIdx = null
-      renderLookups()
-    })
-  }
-
-  if (navDown) {
-    navDown.addEventListener('click', () => {
-      const maxOffset = Math.max(0, allLookups.length - PAGE_SIZE)
-      pageOffset  = Math.min(maxOffset, pageOffset + PAGE_SIZE)
-      expandedIdx = null
-      renderLookups()
-    })
-  }
-
-  const listWrap = document.querySelector('.lookup-list-wrap')
-  if (listWrap) {
-    let wheelCooldown = false
-    listWrap.addEventListener('wheel', (e) => {
-      const total = allLookups.length
-      // Prefer native scroll when the 5-row viewport overflows (e.g. expanded def).
-      const canScroll = listWrap.scrollHeight > listWrap.clientHeight + 1
-      if (canScroll) {
-        const atTop = listWrap.scrollTop <= 0
-        const atBottom = listWrap.scrollTop + listWrap.clientHeight >= listWrap.scrollHeight - 1
-        if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) return
-      }
-      if (total <= PAGE_SIZE) return
-      e.preventDefault()
-      if (wheelCooldown) return
-      wheelCooldown = true
-      setTimeout(() => { wheelCooldown = false }, 150)
-      const maxOffset = Math.max(0, total - PAGE_SIZE)
-      if (e.deltaY > 0 && pageOffset < maxOffset) {
-        pageOffset  = Math.min(maxOffset, pageOffset + 1)
-        expandedIdx = null
-        renderLookups()
-      } else if (e.deltaY < 0 && pageOffset > 0) {
-        pageOffset  = Math.max(0, pageOffset - 1)
-        expandedIdx = null
-        renderLookups()
-      }
-    }, { passive: false })
-  }
+  wireSection('shortcuts-header', 'shortcuts-body')
+  wireSection('settings-header', 'settings-body')
+  wireSection('recent-header', 'recent-body', () => {
+    syncRecentSectionFlex()
+  })
 
   document.addEventListener('keydown', (e) => {
     const total = allLookups.length
     if (total === 0) return
-    const maxOffset = Math.max(0, total - PAGE_SIZE)
+
+    const tag = (e.target && e.target.tagName) || ''
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      if (pageOffset < maxOffset) {
-        pageOffset  = Math.min(maxOffset, pageOffset + 1)
-        expandedIdx = null
-        renderLookups()
-      }
+      kbActiveIdx = kbActiveIdx < 0 ? 0 : Math.min(kbActiveIdx + 1, total - 1)
+      renderLookups()
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      if (pageOffset > 0) {
-        pageOffset  = Math.max(0, pageOffset - 1)
-        expandedIdx = null
-        renderLookups()
-      }
+      kbActiveIdx = kbActiveIdx < 0 ? total - 1 : Math.max(kbActiveIdx - 1, 0)
+      renderLookups()
+    } else if (e.key === 'Enter' && kbActiveIdx >= 0) {
+      e.preventDefault()
+      const entry = allLookups[kbActiveIdx]
+      if (!cleanDefinition(entry?.definition)) return
+      expandedIdx = expandedIdx === kbActiveIdx ? null : kbActiveIdx
+      renderLookups()
     }
   })
 
@@ -412,8 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.onChanged.addListener((changes) => {
     const historyChanged = Object.keys(changes).some(k => k.startsWith('bodhi_history_'))
     if (!historyChanged) return
-    pageOffset  = 0
     expandedIdx = null
+    kbActiveIdx = -1
     loadLookups()
   })
 
