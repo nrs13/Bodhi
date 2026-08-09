@@ -221,6 +221,8 @@
     .recent-section,
     .settings-section {
       flex: 0 0 auto;
+      position: relative;
+      z-index: 0;
     }
 
     .section-header {
@@ -347,11 +349,18 @@
       box-sizing: border-box;
       position: relative;
       isolation: isolate;
+      z-index: 1;
       max-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
       border: 1px solid var(--bodhi-line);
       border-radius: var(--bodhi-radius-shell);
       background: var(--bodhi-surface);
       overflow: hidden;
+    }
+
+    /* Briefly disable hit-testing so Chrome drops a stuck :hover after resize */
+    .lookup-list-wrap.is-hover-reset,
+    .lookup-list-wrap.is-hover-reset .lookup-row {
+      pointer-events: none !important;
     }
 
     .lookup-list-scroll {

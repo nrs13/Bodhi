@@ -343,6 +343,18 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
+  /** Chrome keeps :hover on the old row after popup resize — clear it. */
+  function clearStuckListHover() {
+    const wrap = document.getElementById('lookup-list-wrap')
+    if (!wrap) return
+    wrap.classList.add('is-hover-reset')
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        wrap.classList.remove('is-hover-reset')
+      })
+    })
+  }
+
   function wireSection(headerId, bodyId) {
     const header = document.getElementById(headerId)
     const body   = document.getElementById(bodyId)
@@ -352,11 +364,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const isOpen = body.classList.toggle('open')
       if (chev) chev.classList.toggle('open', isOpen)
       nudgePopupHeight()
+      // Settings/shortcuts open shifts layout under a still mouse → stuck hover
+      clearStuckListHover()
     })
   }
   wireSection('shortcuts-header', 'shortcuts-body')
   wireSection('settings-header', 'settings-body')
   wireSection('recent-header', 'recent-body')
+
+  const listScrollEl = document.getElementById('lookup-list-scroll')
+  if (listScrollEl) {
+    listScrollEl.addEventListener('scroll', clearStuckListHover, { passive: true })
+  }
 
   document.addEventListener('keydown', (e) => {
     const total = allLookups.length
