@@ -81,7 +81,8 @@ function nudgePopupHeight() {
 function renderLookups() {
   const lookupList  = document.getElementById('lookup-list')
   const recentCount = document.getElementById('recent-count')
-  const listWrap    = document.getElementById('lookup-list-wrap')
+  const listScroll  = document.getElementById('lookup-list-scroll')
+    || document.getElementById('lookup-list-wrap')
 
   if (!lookupList) return
 
@@ -155,13 +156,14 @@ function renderLookups() {
     })
   })
 
-  if (listWrap && kbActiveIdx >= 0) scrollKbIntoView()
+  if (listScroll && kbActiveIdx >= 0) scrollKbIntoView()
   nudgePopupHeight()
 }
 
 function scrollKbIntoView() {
-  const listWrap = document.getElementById('lookup-list-wrap')
-  const active = listWrap?.querySelector('.lookup-item.kb-active')
+  const listScroll = document.getElementById('lookup-list-scroll')
+    || document.getElementById('lookup-list-wrap')
+  const active = listScroll?.querySelector('.lookup-item.kb-active')
   if (active) active.scrollIntoView({ block: 'nearest' })
 }
 

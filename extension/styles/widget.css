@@ -41,6 +41,9 @@
   --bodhi-hover: #F1EBE4;
   --bodhi-scrim: rgba(255, 252, 250, 0.72);
   --bodhi-shadow: 0 8px 28px rgba(26, 23, 20, 0.10);
+  --bodhi-scroll-size: 4px;
+  --bodhi-scroll-thumb: rgba(138, 130, 120, 0.28);
+  --bodhi-scroll-thumb-hover: rgba(138, 130, 120, 0.55);
 
   --bodhi-ink-primary: var(--bodhi-ink);
   --bodhi-ink-body: var(--bodhi-ink);
@@ -95,6 +98,8 @@
   --bodhi-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
   --bodhi-ink-disabled: #6A635C;
   --bodhi-ink-correction: #D4A090;
+  --bodhi-scroll-thumb: rgba(176, 166, 154, 0.30);
+  --bodhi-scroll-thumb-hover: rgba(176, 166, 154, 0.60);
 }
 
 .bodhi-widget.bodhi-widget-enter {
@@ -505,12 +510,30 @@
 
 .bodhi-suggestions-scroll {
   max-height: 114px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
   overflow-y: auto !important;
-  scrollbar-width: none !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--bodhi-scroll-thumb) transparent !important;
 }
 
 .bodhi-suggestions-scroll::-webkit-scrollbar {
-  display: none !important;
+  width: var(--bodhi-scroll-size) !important;
+}
+
+.bodhi-suggestions-scroll::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.bodhi-suggestions-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--bodhi-scroll-thumb) !important;
+  border-radius: 999px !important;
+}
+
+.bodhi-suggestions-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bodhi-scroll-thumb-hover) !important;
 }
 
 .bodhi-suggestions-section {
@@ -641,29 +664,47 @@
   text-transform: uppercase !important;
 }
 
-/* ~5 rows visible, then scroll — even 8px gap (spacing scale) */
+/* Slim scroll — matches popup; gutter reserved so text never sits under thumb */
 .bodhi-history-list {
   margin-top: var(--bodhi-space-1) !important;
   max-height: 220px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
   scrollbar-gutter: stable !important;
   scrollbar-width: thin !important;
-  scrollbar-color: var(--bodhi-line) transparent !important;
+  scrollbar-color: var(--bodhi-scroll-thumb) transparent !important;
   outline: none !important;
   display: flex !important;
   flex-direction: column !important;
   gap: var(--bodhi-space-1) !important;
-  padding-right: 2px !important;
+  padding-inline-end: 2px !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar {
-  width: 6px !important;
+  width: var(--bodhi-scroll-size) !important;
+  height: var(--bodhi-scroll-size) !important;
+}
+
+.bodhi-history-list::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin: 6px 0 !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar-thumb {
-  background: var(--bodhi-line) !important;
-  border-radius: 4px !important;
+  background-color: var(--bodhi-scroll-thumb) !important;
+  border-radius: 999px !important;
+  border: 1px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.bodhi-history-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bodhi-scroll-thumb-hover) !important;
+}
+
+.bodhi-history-list::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
 .bodhi-history-row {

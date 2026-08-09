@@ -45,6 +45,11 @@
 
       --bodhi-row-h: 42px;
       --bodhi-list-rows: 5;
+
+      /* Slim scroll — idle quiet, clearer on hover */
+      --bodhi-scroll-size: 4px;
+      --bodhi-scroll-thumb: rgba(138, 130, 120, 0.28);
+      --bodhi-scroll-thumb-hover: rgba(138, 130, 120, 0.55);
     }
 
     html[data-bodhi-theme="dark"] {
@@ -61,12 +66,45 @@
       --bodhi-caption: #C4A0AE;
       --bodhi-search: #8FA9A3;
       --bodhi-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      --bodhi-scroll-thumb: rgba(176, 166, 154, 0.30);
+      --bodhi-scroll-thumb-hover: rgba(176, 166, 154, 0.60);
     }
 
     html, body {
       width: 360px;
       min-width: 320px;
       height: auto;
+    }
+
+    /* Shared slim scrollbar (Chrome / WebKit) */
+    .bodhi-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: var(--bodhi-scroll-thumb) transparent;
+    }
+
+    .bodhi-scroll::-webkit-scrollbar {
+      width: var(--bodhi-scroll-size);
+      height: var(--bodhi-scroll-size);
+    }
+
+    .bodhi-scroll::-webkit-scrollbar-track {
+      background: transparent;
+      margin: 6px 0;
+    }
+
+    .bodhi-scroll::-webkit-scrollbar-thumb {
+      background-color: var(--bodhi-scroll-thumb);
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background-clip: padding-box;
+    }
+
+    .bodhi-scroll::-webkit-scrollbar-thumb:hover {
+      background-color: var(--bodhi-scroll-thumb-hover);
+    }
+
+    .bodhi-scroll::-webkit-scrollbar-corner {
+      background: transparent;
     }
 
     body {
@@ -271,37 +309,36 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* ~5 rows visible when open; space gone when section collapses */
+    /*
+      Scroll containment: bordered shell clips; inner scrollport owns overflow.
+      scrollbar-gutter: stable reserves thumb lane so list text never shifts
+      or sits under the bar when scrolling kicks in.
+    */
     .lookup-list-wrap {
+      box-sizing: border-box;
+      position: relative;
+      isolation: isolate;
+      max-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
+      border: 1px solid var(--bodhi-line);
+      border-radius: 12px;
+      background: var(--bodhi-surface);
+      overflow: hidden;
+    }
+
+    .lookup-list-scroll {
+      box-sizing: border-box;
       max-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-gutter: stable;
-      scrollbar-width: thin;
-      scrollbar-color: var(--bodhi-line) transparent;
-      border: 1px solid var(--bodhi-line);
-      border-radius: 12px;
-      background: var(--bodhi-surface);
-      padding-right: 2px;
-    }
-
-    .lookup-list-wrap::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .lookup-list-wrap::-webkit-scrollbar-thumb {
-      background: var(--bodhi-line);
-      border-radius: 4px;
-    }
-
-    .lookup-list-wrap::-webkit-scrollbar-track {
-      background: transparent;
     }
 
     .lookup-list {
       display: flex;
       flex-direction: column;
+      /* Keep row text clear of the reserved gutter */
+      padding-inline-end: 2px;
     }
 
     .lookup-item {
@@ -577,7 +614,7 @@
     }
   </style>
 </head>
-<body>
+<body class="bodhi-scroll">
   <header class="header">
     <svg class="header-bg-dots" width="120" height="90" viewBox="0 0 120 90" aria-hidden="true"></svg>
     <div class="header-inner">
@@ -643,8 +680,10 @@
       </button>
       <div class="section-body open" id="recent-body">
         <div class="section-body-inner">
-          <div class="lookup-list-wrap" id="lookup-list-wrap" tabindex="0" role="listbox" aria-label="Recent lookups">
-            <div class="lookup-list" id="lookup-list"></div>
+          <div class="lookup-list-wrap" id="lookup-list-wrap">
+            <div class="lookup-list-scroll bodhi-scroll" id="lookup-list-scroll" tabindex="0" role="listbox" aria-label="Recent lookups">
+              <div class="lookup-list" id="lookup-list"></div>
+            </div>
           </div>
         </div>
       </div>
