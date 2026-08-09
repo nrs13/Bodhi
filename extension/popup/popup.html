@@ -4,72 +4,110 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bodhi</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
   <style>
     @keyframes bodhi-dash-orbit {
       from { stroke-dashoffset: 0; }
       to   { stroke-dashoffset: -44; }
     }
     @keyframes bodhi-scanner {
-      0%   { transform: translateX(0px);  opacity: 0; }
-      6%   { opacity: 1; }
-      94%  { opacity: 1; }
+      0%   { transform: translateX(0); opacity: 0; }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
       100% { transform: translateX(72px); opacity: 0; }
     }
     @keyframes bodhi-fade-in {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes bodhi-empty-float {
-      0%, 100% { transform: translateY(0px); }
-      50%       { transform: translateY(-3px); }
-    }
-    @keyframes bodhi-ccw-spin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(-360deg); }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root, html[data-bodhi-theme="light"] {
+      --bodhi-space-1: 4px;
+      --bodhi-space-2: 8px;
+      --bodhi-space-3: 12px;
+      --bodhi-space-4: 16px;
+      --bodhi-space-5: 24px;
+      --bodhi-canvas: #F7F7F5;
+      --bodhi-surface: #FFFFFF;
+      --bodhi-ink: #141414;
+      --bodhi-ink-soft: #5C5C5C;
+      --bodhi-ink-faint: #8A8A8A;
+      --bodhi-line: #E6E6E4;
+      --bodhi-accent: #2F6FED;
+      --bodhi-hover: #F2F2F0;
+      --bodhi-ink-primary: var(--bodhi-ink);
+      --bodhi-ink-body: var(--bodhi-ink);
+      --bodhi-ink-secondary: var(--bodhi-ink-soft);
+      --bodhi-ink-muted: var(--bodhi-ink-faint);
+      --bodhi-font-display: 'Doto', sans-serif;
+      --bodhi-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --bodhi-motion-fast: 140ms;
+      --bodhi-motion-base: 220ms;
+      --bodhi-ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --bodhi-shadow: 0 12px 36px rgba(20,20,20,0.10);
+    }
+
+    html[data-bodhi-theme="dark"] {
+      --bodhi-canvas: #121214;
+      --bodhi-surface: #1C1C1F;
+      --bodhi-ink: #F0F0F2;
+      --bodhi-ink-soft: #A0A0A6;
+      --bodhi-ink-faint: #7A7A82;
+      --bodhi-line: #2E2E32;
+      --bodhi-accent: #7BA3F7;
+      --bodhi-hover: #26262A;
+      --bodhi-shadow: 0 12px 36px rgba(0,0,0,0.45);
+    }
+
+    @font-face {
+      font-family: 'Doto';
+      src: url('../fonts/Doto-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Doto';
+      src: url('../fonts/Doto-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+
     body {
-      --bodhi-ink-primary: #111111;
-      --bodhi-ink-body: #333333;
-      --bodhi-ink-secondary: #555555;
-      --bodhi-ink-muted: #666666;
-      --bodhi-ink-disabled: #999999;
       width: 340px;
-      height: 580px;
+      height: 620px;
       display: flex;
       flex-direction: column;
-      font-family: 'Doto', monospace;
+      font-family: var(--bodhi-font-body);
       -webkit-font-smoothing: antialiased;
-      background: #ffffff;
-      border-radius: 20px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+      background: var(--bodhi-surface);
+      border-radius: 16px;
+      box-shadow: var(--bodhi-shadow);
       overflow: hidden;
       opacity: 0;
       transform: translateY(6px);
-      transition: opacity 0.3s ease, transform 0.3s ease;
-      color: var(--bodhi-ink-body);
+      transition: opacity 0.28s var(--bodhi-ease), transform 0.28s var(--bodhi-ease);
+      color: var(--bodhi-ink);
     }
     body.mounted {
       opacity: 1;
       transform: translateY(0);
     }
+
     .header {
-      padding: 22px 22px 18px;
-      background: #FAFAFA;
-      border-bottom: 1px solid #F0F0F0;
+      padding: var(--bodhi-space-4) var(--bodhi-space-4) var(--bodhi-space-3);
+      background: var(--bodhi-canvas);
+      border-bottom: 1px solid var(--bodhi-line);
       position: relative;
       overflow: hidden;
+      flex-shrink: 0;
     }
     .header-bg-dots {
       position: absolute;
       top: 0; right: 0;
-      opacity: 0.45;
+      opacity: 0.4;
       pointer-events: none;
+      color: var(--bodhi-ink-faint);
     }
     .header-inner {
       display: flex;
@@ -79,105 +117,152 @@
     .header-logo-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: var(--bodhi-space-2);
     }
     .header-wordmark {
-      font-size: 26px;
-      color: var(--bodhi-ink-primary);
+      font-family: var(--bodhi-font-display);
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--bodhi-ink);
       letter-spacing: 0.08em;
       line-height: 1;
     }
     .header-tagline {
+      font-family: var(--bodhi-font-body);
       font-size: 11px;
-      color: var(--bodhi-ink-muted);
-      margin: 5px 0 0 32px;
-      letter-spacing: 0.06em;
+      color: var(--bodhi-ink-faint);
+      margin: var(--bodhi-space-1) 0 0 30px;
+      letter-spacing: 0.04em;
     }
+
     .body {
-      padding: 18px 22px 20px;
+      padding: var(--bodhi-space-4);
       display: flex;
       flex-direction: column;
+      gap: var(--bodhi-space-4);
       flex: 1;
       min-height: 0;
       overflow: hidden;
     }
+
     .section-header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--bodhi-space-2);
       width: 100%;
       background: none;
       border: none;
-      padding: 0 0 10px 0;
+      padding: 0 0 var(--bodhi-space-2) 0;
       cursor: pointer;
-      font-family: 'Doto', monospace;
+      font-family: var(--bodhi-font-display);
     }
     .section-header hr {
       flex: 1; border: none;
-      border-top: 1px dashed #EEEEEE; margin: 0;
+      border-top: 1px dashed var(--bodhi-line); margin: 0;
     }
     .section-header .section-title {
-      font-size: 10px; color: var(--bodhi-ink-secondary);
-      letter-spacing: 0.12em; white-space: nowrap;
+      font-family: var(--bodhi-font-display);
+      font-weight: 700;
+      font-size: 10px;
+      color: var(--bodhi-ink-soft);
+      letter-spacing: 0.12em;
+      white-space: nowrap;
       text-transform: uppercase;
-      transition: color 0.15s ease;
     }
     .section-header .section-count {
-      font-size: 9px; color: var(--bodhi-ink-muted);
-      transition: color 0.15s ease;
-      margin-left: 5px;
+      font-family: var(--bodhi-font-body);
+      font-size: 10px;
+      color: var(--bodhi-ink-faint);
+      margin-left: var(--bodhi-space-1);
     }
-    .section-header:hover .section-title { color: var(--bodhi-ink-muted); }
-    .section-header:hover .section-count { color: var(--bodhi-ink-muted); }
+    .section-header:hover .section-title { color: var(--bodhi-ink-faint); }
     .section-chevron {
       flex-shrink: 0;
       transform: rotate(0deg);
-      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-      opacity: 0.3;
+      transition: transform var(--bodhi-motion-base) var(--bodhi-ease);
+      opacity: 0.35;
+      color: var(--bodhi-ink-soft);
     }
     .section-chevron.open { transform: rotate(180deg); }
-    .section-header:hover .section-chevron { opacity: 0.6; }
+    .section-header:hover .section-chevron { opacity: 0.65; }
+
+    /* Collapse via grid rows — avoids max-height:400px phantom gap */
     .section-body {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
     }
-    .section-body.open { max-height: 400px; }
-    #recent-body.open {
-      flex: 1;
-      min-height: 0;
-      max-height: none;
+    .section-body > .section-body-inner {
       overflow: hidden;
+      min-height: 0;
+    }
+    .section-body.open {
+      grid-template-rows: 1fr;
+    }
+
+    .shortcuts-section,
+    .settings-section {
+      flex-shrink: 0;
+    }
+
+    #recent-body.open {
+      flex: 1 1 auto;
+      min-height: 0;
+      /* keep display:grid from .section-body so collapse stays gap-free */
+    }
+    #recent-body.open > .section-body-inner {
+      flex: 1;
+      min-height: 168px;
+      height: 100%;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
-    .shortcuts-section { margin-bottom: 18px; flex-shrink: 0; }
-    .shortcuts-list { display: flex; flex-direction: column; gap: 7px; padding-bottom: 2px; }
+
+    .shortcuts-list { display: flex; flex-direction: column; gap: var(--bodhi-space-2); }
     .shortcut-row {
       display: flex; align-items: center;
       justify-content: space-between;
-      padding: 7px 10px; border-radius: 10px;
-      background: #FAFAFA; border: 1px solid #F0F0F0;
+      gap: var(--bodhi-space-3);
+      padding: var(--bodhi-space-2) var(--bodhi-space-3);
+      border-radius: 10px;
+      background: var(--bodhi-canvas);
+      border: 1px solid var(--bodhi-line);
     }
-    .shortcut-label { font-size: 13px; color: var(--bodhi-ink-body); letter-spacing: 0.03em; }
-    .shortcut-keys { display: flex; align-items: center; gap: 3px; }
+    .shortcut-label {
+      font-size: 12px;
+      color: var(--bodhi-ink);
+      letter-spacing: 0.01em;
+    }
+    .shortcut-keys { display: flex; align-items: center; gap: var(--bodhi-space-1); }
     .key {
-      font-family: 'Doto', monospace;
-      font-size: 11px; color: var(--bodhi-ink-secondary);
-      background: #F5F5F5; border: 1px solid #DDDDDD;
-      border-radius: 6px; padding: 2px 7px;
-      letter-spacing: 0.04em; white-space: nowrap;
-      box-shadow: 0 1px 0 #D0D0D0;
+      font-family: var(--bodhi-font-display);
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--bodhi-ink-soft);
+      background: var(--bodhi-hover);
+      border: 1px solid var(--bodhi-line);
+      border-radius: 6px;
+      padding: 2px 7px;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
     }
-    .recent-section { margin-bottom: 18px; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+    .recent-section {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
 
     .lookup-list-wrap {
       flex: 1;
-      min-height: 0;
+      min-height: 168px;
       overflow-y: auto;
       scrollbar-width: none;
-      border: 1px solid #F4F4F4;
+      border: 1px solid var(--bodhi-line);
       border-radius: 12px;
+      background: var(--bodhi-surface);
     }
     .lookup-list-wrap::-webkit-scrollbar { display: none; }
     .lookup-list { display: flex; flex-direction: column; }
@@ -187,121 +272,168 @@
       background: transparent;
       border: none; padding: 0;
       cursor: pointer; text-align: left;
-      font-family: 'Doto', monospace;
+      font-family: var(--bodhi-font-body);
       width: 100%;
+      color: inherit;
     }
     .lookup-item-inner {
       display: flex; align-items: center;
       justify-content: space-between;
-      padding: 8px 10px;
+      padding: var(--bodhi-space-2) var(--bodhi-space-3);
       border-left: 2px solid transparent;
-      background: #FFFFFF;
-      transition: background 0.12s ease, border-left-color 0.12s ease;
+      background: var(--bodhi-surface);
+      transition: background var(--bodhi-motion-fast) var(--bodhi-ease), border-left-color var(--bodhi-motion-fast) var(--bodhi-ease);
     }
     .lookup-item.active .lookup-item-inner,
     .lookup-item:hover .lookup-item-inner {
-      background: #F8F8F8;
-      border-left-color: #D8D8D8;
+      background: var(--bodhi-hover);
+      border-left-color: var(--bodhi-line);
     }
-    .lookup-item-left { display: flex; align-items: center; gap: 10px; }
+    .lookup-item-left { display: flex; align-items: center; gap: var(--bodhi-space-2); color: var(--bodhi-ink-faint); }
     .lookup-word {
-      font-size: 13px; color: var(--bodhi-ink-primary); letter-spacing: 0.03em;
-      transition: color 0.12s ease;
+      font-family: var(--bodhi-font-display);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--bodhi-ink);
+      letter-spacing: 0.02em;
     }
-    .lookup-item.active .lookup-word,
-    .lookup-item:hover .lookup-word { color: var(--bodhi-ink-primary); }
-    .lookup-right { display: flex; align-items: center; gap: 6px; }
-    .lookup-pos { font-size: 10px; color: var(--bodhi-ink-muted); font-style: italic; letter-spacing: 0.03em; }
+    .lookup-right { display: flex; align-items: center; gap: var(--bodhi-space-2); }
+    .lookup-pos {
+      font-size: 10px;
+      color: var(--bodhi-ink-faint);
+      font-style: italic;
+    }
     .lookup-chevron {
-      transition: transform 0.2s ease;
-      opacity: 0.2;
+      transition: transform var(--bodhi-motion-fast) var(--bodhi-ease);
+      opacity: 0.35;
+      color: var(--bodhi-ink-faint);
     }
     .lookup-item.active .lookup-chevron,
-    .lookup-item:hover .lookup-chevron { opacity: 0.5; }
+    .lookup-item:hover .lookup-chevron { opacity: 0.7; }
     .lookup-chevron.open { transform: rotate(180deg); }
 
     .lookup-def {
-      max-height: 0; overflow: hidden;
-      transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1);
-      padding-left: 36px; padding-right: 12px;
-      background: #FAFAFA;
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
+      background: var(--bodhi-canvas);
     }
-    .lookup-def.open { max-height: 56px; }
-    .lookup-def p {
-      font-size: 11px; color: var(--bodhi-ink-body); line-height: 1.6;
-      margin: 0 0 8px 0; letter-spacing: 0.02em;
+    .lookup-def > p {
+      overflow: hidden;
+      min-height: 0;
+      font-size: 11px;
+      color: var(--bodhi-ink-soft);
+      line-height: 1.5;
+      margin: 0;
+      padding: 0 var(--bodhi-space-3) 0 36px;
     }
-    .lookup-divider { margin: 0 10px; }
+    .lookup-def.open { grid-template-rows: 1fr; }
+    .lookup-def.open > p { padding-bottom: var(--bodhi-space-2); }
+    .lookup-divider { margin: 0 var(--bodhi-space-3); color: var(--bodhi-line); }
+    .lookup-divider svg line { stroke: currentColor; }
 
     .lookup-empty {
       display: flex; flex-direction: column; align-items: center;
-      padding: 18px 0 10px; gap: 6px;
-      animation: bodhi-fade-in 0.35s ease both;
+      padding: var(--bodhi-space-5) var(--bodhi-space-3);
+      gap: var(--bodhi-space-2);
+      animation: bodhi-fade-in 0.28s var(--bodhi-ease) both;
     }
     .lookup-empty-icon {
-      font-size: 22px; color: var(--bodhi-ink-muted); line-height: 1;
-      animation: bodhi-empty-float 3s ease-in-out infinite;
-      display: block;
+      font-size: 22px; color: var(--bodhi-ink-faint); line-height: 1;
     }
-    .lookup-empty-line1 { font-size: 12px; color: var(--bodhi-ink-muted); letter-spacing: 0.04em; }
-    .lookup-empty-line2 { font-size: 10px; color: var(--bodhi-ink-muted); letter-spacing: 0.04em; }
+    .lookup-empty-line1 { font-size: 12px; color: var(--bodhi-ink-soft); }
+    .lookup-empty-line2 { font-size: 11px; color: var(--bodhi-ink-faint); text-align: center; }
 
-    /* Fade gradient */
     .lookup-fade {
-      height: 16px; margin-top: -16px; position: relative; pointer-events: none;
-      background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
+      height: var(--bodhi-space-4);
+      margin-top: calc(-1 * var(--bodhi-space-4));
+      position: relative;
+      pointer-events: none;
+      background: linear-gradient(to bottom, transparent, var(--bodhi-surface));
       border-radius: 0 0 12px 12px;
     }
 
-    /* Navigation */
     .recent-nav {
       display: flex; align-items: center;
-      justify-content: center; gap: 12px; margin-top: 6px;
+      justify-content: center;
+      gap: var(--bodhi-space-3);
+      margin-top: var(--bodhi-space-2);
+      flex-shrink: 0;
     }
     .nav-btn {
       background: none; border: none; cursor: pointer;
-      padding: 4px 6px; border-radius: 6px;
-      opacity: 0.5; transition: opacity 0.15s ease, background 0.15s ease;
-      font-family: 'Doto', monospace; font-size: 10px;
-      color: var(--bodhi-ink-muted); letter-spacing: 0.06em;
-      display: flex; align-items: center; gap: 4px;
+      padding: var(--bodhi-space-1) var(--bodhi-space-2);
+      border-radius: 6px;
+      opacity: 0.55;
+      transition: opacity var(--bodhi-motion-fast) var(--bodhi-ease), background var(--bodhi-motion-fast) var(--bodhi-ease);
+      font-family: var(--bodhi-font-body);
+      font-size: 10px;
+      color: var(--bodhi-ink-faint);
+      display: flex; align-items: center; gap: var(--bodhi-space-1);
     }
-    .nav-btn:hover:not(:disabled) { opacity: 1; background: #F5F5F5; }
-    .nav-btn:disabled { opacity: 0.2; cursor: default; }
-    .nav-hint { font-size: 10px; color: var(--bodhi-ink-muted); letter-spacing: 0.06em; }
-    .settings-section { margin-bottom: 18px; flex-shrink: 0; }
-    .settings-list { display: flex; flex-direction: column; gap: 2px; padding-bottom: 2px; }
+    .nav-btn:hover:not(:disabled) { opacity: 1; background: var(--bodhi-hover); }
+    .nav-btn:disabled { opacity: 0.25; cursor: default; }
+    .nav-hint { font-size: 10px; color: var(--bodhi-ink-faint); }
+
+    .settings-list { display: flex; flex-direction: column; gap: 0; }
     .setting-row {
       display: flex; align-items: center;
       justify-content: space-between;
-      padding: 9px 4px;
-      border-bottom: 1px dashed #F0F0F0;
+      gap: var(--bodhi-space-3);
+      padding: var(--bodhi-space-3) var(--bodhi-space-1);
+      border-bottom: 1px dashed var(--bodhi-line);
     }
     .setting-row:last-child { border-bottom: none; }
-    .setting-label { font-size: 13px; color: var(--bodhi-ink-body); letter-spacing: 0.03em; }
-    .setting-sub { font-size: 10px; color: var(--bodhi-ink-muted); margin-top: 2px; letter-spacing: 0.04em; }
+    .setting-label { font-size: 13px; color: var(--bodhi-ink); }
+    .setting-sub { font-size: 10px; color: var(--bodhi-ink-faint); margin-top: 2px; }
 
     .toggle-wrap {
       position: relative; width: 36px; height: 20px;
-      border-radius: 999px; background: #E8E8E8;
+      border-radius: 999px; background: var(--bodhi-line);
       border: none; cursor: pointer; padding: 0;
-      transition: background 0.25s cubic-bezier(0.4,0,0.2,1);
+      transition: background var(--bodhi-motion-base) var(--bodhi-ease);
       flex-shrink: 0;
     }
-    .toggle-wrap.on { background: #111111; }
+    .toggle-wrap.on { background: var(--bodhi-ink); }
     .toggle-thumb {
       position: absolute; top: 3px; left: 3px;
       width: 14px; height: 14px; border-radius: 50%;
-      background: white;
-      transition: left 0.25s cubic-bezier(0.4,0,0.2,1);
+      background: var(--bodhi-surface);
+      transition: left var(--bodhi-motion-base) var(--bodhi-ease);
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
     .toggle-wrap.on .toggle-thumb { left: 19px; }
+
+    .theme-seg {
+      display: flex;
+      border: 1px solid var(--bodhi-line);
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--bodhi-canvas);
+    }
+    .theme-seg button {
+      border: none;
+      background: transparent;
+      color: var(--bodhi-ink-faint);
+      font-family: var(--bodhi-font-body);
+      font-size: 10px;
+      padding: var(--bodhi-space-1) var(--bodhi-space-2);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+    }
+    .theme-seg button.active {
+      background: var(--bodhi-ink);
+      color: var(--bodhi-surface);
+    }
+
     .footer {
-      padding: 11px 22px; background: #FAFAFA;
-      border-top: 1px solid #F0F0F0;
+      padding: var(--bodhi-space-3) var(--bodhi-space-4);
+      background: var(--bodhi-canvas);
+      border-top: 1px solid var(--bodhi-line);
       display: flex; align-items: center;
       justify-content: space-between;
+      flex-shrink: 0;
     }
     .footer-scanner {
       position: relative; width: 88px; height: 10px; flex-shrink: 0;
@@ -309,20 +441,20 @@
     .footer-scanner-dot {
       position: absolute; top: 50%; left: 0;
       width: 4px; height: 4px; margin-top: -2px;
-      border-radius: 50%; background: #AAAAAA;
-      opacity: 0; transition: opacity 0.4s ease;
+      border-radius: 50%; background: var(--bodhi-ink-faint);
+      opacity: 0; transition: opacity 0.3s ease;
     }
     .footer-scanner-dot.scanning {
       opacity: 1;
       animation: bodhi-scanner 2.8s cubic-bezier(0.45,0,0.55,1) infinite;
     }
     .footer-tagline {
-      font-size: 10px; color: var(--bodhi-ink-muted);
-      letter-spacing: 0.05em; transition: opacity 0.4s ease;
+      font-size: 10px; color: var(--bodhi-ink-faint);
+      letter-spacing: 0.03em;
     }
-    .wavy-path { transition: stroke 0.12s ease; }
   </style>
 </head>
+
 <body>
 
   <!-- Header -->
@@ -335,12 +467,12 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;">
             <circle id="header-icon-circle"
               cx="11" cy="11" r="7"
-              stroke="#CCCCCC" stroke-width="1.4"
+              stroke="currentColor" stroke-width="1.4"
               stroke-linecap="round" stroke-dasharray="1.8 2.8"
               fill="none"
               style="transform-origin:11px 11px; animation: bodhi-dash-orbit 3.5s linear infinite; transition: opacity 0.4s ease;"/>
             <line id="header-icon-line" x1="16.5" y1="16.5" x2="21" y2="21"
-              stroke="#CCCCCC" stroke-width="1.4" stroke-linecap="round"
+              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
               style="transition: opacity 0.4s ease;"/>
           </svg>
           <span class="header-wordmark">bodhi</span>
@@ -359,11 +491,12 @@
         <hr>
         <span class="section-title">shortcuts</span>
         <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
-          <polyline points="6 9 12 15 18 9" stroke="#555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
       <div class="section-body open" id="shortcuts-body">
+        <div class="section-body-inner">
         <div class="shortcuts-list">
           <div class="shortcut-row">
             <span class="shortcut-label">look up word from captions</span>
@@ -381,6 +514,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -391,11 +525,12 @@
         <span class="section-title">recent lookups</span>
         <span class="section-count" id="recent-count"></span>
         <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
-          <polyline points="6 9 12 15 18 9" stroke="#555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
       <div class="section-body open" id="recent-body">
+        <div class="section-body-inner">
         <div class="lookup-list-wrap" id="lookup-list-wrap">
           <div class="lookup-list" id="lookup-list"></div>
         </div>
@@ -403,7 +538,7 @@
         <div class="recent-nav" id="recent-nav" style="display:none;">
           <button class="nav-btn" id="nav-up" disabled>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-              <polyline points="6 15 12 9 18 15" stroke="#AAAAAA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="6 15 12 9 18 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             prev
           </button>
@@ -411,9 +546,10 @@
           <button class="nav-btn" id="nav-down">
             next
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-              <polyline points="6 9 12 15 18 9" stroke="#AAAAAA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -424,11 +560,12 @@
         <hr>
         <span class="section-title">settings</span>
         <svg class="section-chevron open" width="10" height="10" viewBox="0 0 24 24" fill="none">
-          <polyline points="6 9 12 15 18 9" stroke="#555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <hr>
       </button>
       <div class="section-body open" id="settings-body">
+        <div class="section-body-inner">
         <div class="settings-list">
           <div class="setting-row">
             <div>
@@ -457,6 +594,19 @@
               <span class="toggle-thumb"></span>
             </button>
           </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">appearance</div>
+              <div class="setting-sub">system follows your OS setting</div>
+            </div>
+            <div class="theme-seg" id="theme-seg" role="group" aria-label="Appearance">
+              <button type="button" data-theme="system" class="active">auto</button>
+              <button type="button" data-theme="light">light</button>
+              <button type="button" data-theme="dark">dark</button>
+            </div>
+          </div>
+
+        </div>
         </div>
       </div>
     </div>
@@ -468,7 +618,7 @@
     <div class="footer-scanner">
       <svg width="88" height="10" viewBox="0 0 88 10" style="display:block;">
         <line x1="0" y1="5" x2="88" y2="5"
-          stroke="#E8E8E8" stroke-width="1.8"
+          stroke="currentColor" stroke-width="1.8"
           stroke-linecap="round" stroke-dasharray="2 5.5"/>
       </svg>
       <div class="footer-scanner-dot scanning" id="scanner-dot"></div>

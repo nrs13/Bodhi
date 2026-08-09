@@ -23,6 +23,45 @@ let settings = {
   autoEnableCaptions: true,
 }
 
+/** @type {'system' | 'light' | 'dark'} */
+let themePref = 'system'
+let systemDarkMq = null
+
+function resolveTheme() {
+  if (themePref === 'light' || themePref === 'dark') return themePref
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+function applyThemeToElement(el) {
+  if (!el) return
+  el.setAttribute('data-bodhi-theme', resolveTheme())
+}
+
+function applyThemeToOpenWidget() {
+  if (widgetInstance) applyThemeToElement(widgetInstance)
+}
+
+function initThemeListeners() {
+  chrome.storage.local.get(['bodhi_theme'], (res) => {
+    if (res.bodhi_theme === 'light' || res.bodhi_theme === 'dark' || res.bodhi_theme === 'system') {
+      themePref = res.bodhi_theme
+    }
+    applyThemeToOpenWidget()
+  })
+  try {
+    systemDarkMq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onScheme = () => {
+      if (themePref === 'system') applyThemeToOpenWidget()
+    }
+    if (systemDarkMq.addEventListener) systemDarkMq.addEventListener('change', onScheme)
+    else if (systemDarkMq.addListener) systemDarkMq.addListener(onScheme)
+  } catch { /* ignore */ }
+}
+
 function applyAutoEnableCaptionsSetting() {
   if (transcriptManager.setAutoEnableCaptions) {
     transcriptManager.setAutoEnableCaptions(settings.autoEnableCaptions !== false)
@@ -55,6 +94,13 @@ chrome.storage.onChanged.addListener((changes) => {
     settings.autoEnableCaptions = changes.bodhi_autoEnableCaptions.newValue
     applyAutoEnableCaptionsSetting()
   }
+  if (changes.bodhi_theme) {
+    const v = changes.bodhi_theme.newValue
+    if (v === 'light' || v === 'dark' || v === 'system') {
+      themePref = v
+      applyThemeToOpenWidget()
+    }
+  }
 })
 
 chrome.runtime.onMessage.addListener((msg) => {
@@ -67,6 +113,12 @@ chrome.runtime.onMessage.addListener((msg) => {
     case 'autoEnableCaptions':
       settings.autoEnableCaptions = msg.value
       applyAutoEnableCaptionsSetting()
+      break
+    case 'theme':
+      if (msg.value === 'light' || msg.value === 'dark' || msg.value === 'system') {
+        themePref = msg.value
+        applyThemeToOpenWidget()
+      }
       break
   }
 });
@@ -273,37 +325,73 @@ async function loadVideoHistory() {
 }
 
 function hotkeyIconSvg() {
-  return `<svg width="13" height="11" viewBox="0 0 16 13" fill="none" style="flex-shrink:0;">
+  return `<svg class="bodhi-method-icon" width="13" height="11" viewBox="0 0 16 13" fill="none" aria-hidden="true">
     <rect x="1" y="1" width="14" height="11" rx="2.5"
-      stroke="#C8C8C8" stroke-width="1.1" stroke-dasharray="1.5 2.4"
+      stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4"
       stroke-linecap="round" fill="none"/>
     <line x1="5.5" y1="6.5" x2="10.5" y2="6.5"
-      stroke="#C8C8C8" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 1.8"/>
+      stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 1.8"/>
     <line x1="8" y1="4" x2="8" y2="9"
-      stroke="#C8C8C8" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 1.8"/>
+      stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 1.8"/>
   </svg>`
 }
 
 function searchIconSvg() {
-  return `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;">
+  return `<svg class="bodhi-method-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
     <circle cx="6" cy="6" r="4.2"
-      stroke="#C8C8C8" stroke-width="1.1" stroke-dasharray="1.5 2.4"
+      stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 2.4"
       stroke-linecap="round" fill="none"/>
     <line x1="9.3" y1="9.3" x2="12.8" y2="12.8"
-      stroke="#C8C8C8" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="1.2 2"/>
+      stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="1.2 2"/>
   </svg>`
 }
 
 function historyClockSvg() {
-  return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <circle cx="12" cy="12" r="8.5"
-      stroke="#CCCCCC" stroke-width="1.4"
+      stroke="currentColor" stroke-width="1.4"
       stroke-dasharray="2 3" stroke-linecap="round" fill="none"/>
     <polyline class="bodhi-clock-hands" points="12,8 12,12.5 15,14.8"
-      stroke="#CCCCCC" stroke-width="1.4"
+      stroke="currentColor" stroke-width="1.4"
       stroke-linecap="round" stroke-linejoin="round"
       stroke-dasharray="1.5 2.2"/>
   </svg>`
+}
+
+function methodBadgeHtml(source) {
+  const isSearch = source === 'search'
+  const title = isSearch ? 'Found via search' : 'Found via captions (⌘B)'
+  const icon = isSearch ? searchIconSvg() : hotkeyIconSvg()
+  return `<span class="bodhi-method" title="${title}" aria-label="${title}">${icon}</span>`
+}
+
+function toolbarHtml({ showHistory = false, showBack = false } = {}) {
+  return `
+    <div class="bodhi-toolbar">
+      <div class="bodhi-toolbar-left">
+        ${showBack ? `<button class="bodhi-back" aria-label="Back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <polyline points="15,6 9,12 15,18"
+              stroke="currentColor" stroke-width="1.5"
+              stroke-linecap="round" stroke-linejoin="round"
+              stroke-dasharray="2 2.5"/>
+          </svg>
+        </button>` : ''}
+      </div>
+      <div class="bodhi-toolbar-spacer"></div>
+      <div class="bodhi-toolbar-actions">
+        ${showHistory ? `<button class="bodhi-history-btn" data-action="open-history" title="Session history" aria-label="Session history">
+          ${historyClockSvg()}
+        </button>` : ''}
+        <button class="bodhi-close" aria-label="Close Bodhi">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `
 }
 
 function spinClockHands(btn) {
@@ -325,10 +413,10 @@ function buildSearchBoxHtml() {
           autocomplete="off" spellcheck="false"/>
         <button class="bodhi-search-btn" aria-label="Search">
           <svg class="bodhi-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="#CCCCCC" stroke-width="1.4"
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.4"
               stroke-linecap="round" stroke-dasharray="1.8 2.8" fill="none"/>
             <line x1="16.5" y1="16.5" x2="21" y2="21"
-              stroke="#CCCCCC" stroke-width="1.4" stroke-linecap="round"/>
+              stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
@@ -349,10 +437,16 @@ function attachSearchHandlers(widget) {
   let typedQuery = ''
 
   const updateIcon = (hasText) => {
+    const icon = widget.querySelector('.bodhi-search-icon')
     const allParts = widget.querySelectorAll('.bodhi-search-icon circle, .bodhi-search-icon line')
-    const color = hasText ? '#111111' : '#CCCCCC'
     const width = hasText ? '1.8' : '1.4'
-    allParts.forEach(el => { el.setAttribute('stroke', color); el.setAttribute('stroke-width', width) })
+    allParts.forEach(el => {
+      el.setAttribute('stroke', 'currentColor')
+      el.setAttribute('stroke-width', width)
+    })
+    if (icon) {
+      icon.style.color = hasText ? 'var(--bodhi-ink)' : 'var(--bodhi-ink-faint)'
+    }
   }
 
   const resetIdleTimer = () => {
@@ -434,26 +528,26 @@ function attachSearchHandlers(widget) {
     const btn = widget.querySelector('.bodhi-search-btn')
     if (btn) {
       btn.style.pointerEvents = 'none'
-      btn.innerHTML = `<svg class="bodhi-dotted-spinner" width="18" height="18" viewBox="0 0 24 24">
-        <circle cx="12" cy="3" r="1.5" fill="#888888" opacity="1"></circle>
-        <circle cx="18.36" cy="5.64" r="1.5" fill="#888888" opacity="0.8"></circle>
-        <circle cx="21" cy="12" r="1.5" fill="#888888" opacity="0.6"></circle>
-        <circle cx="18.36" cy="18.36" r="1.5" fill="#888888" opacity="0.4"></circle>
-        <circle cx="12" cy="21" r="1.5" fill="#888888" opacity="0.2"></circle>
-        <circle cx="5.64" cy="18.36" r="1.5" fill="#888888" opacity="0.1"></circle>
-        <circle cx="3" cy="12" r="1.5" fill="#888888" opacity="0.1"></circle>
-        <circle cx="5.64" cy="5.64" r="1.5" fill="#888888" opacity="0.1"></circle>
+      btn.innerHTML = `<svg class="bodhi-dotted-spinner" width="18" height="18" viewBox="0 0 24 24" style="color:var(--bodhi-ink-soft)">
+        <circle cx="12" cy="3" r="1.5" fill="currentColor" opacity="1"></circle>
+        <circle cx="18.36" cy="5.64" r="1.5" fill="currentColor" opacity="0.8"></circle>
+        <circle cx="21" cy="12" r="1.5" fill="currentColor" opacity="0.6"></circle>
+        <circle cx="18.36" cy="18.36" r="1.5" fill="currentColor" opacity="0.4"></circle>
+        <circle cx="12" cy="21" r="1.5" fill="currentColor" opacity="0.2"></circle>
+        <circle cx="5.64" cy="18.36" r="1.5" fill="currentColor" opacity="0.15"></circle>
+        <circle cx="3" cy="12" r="1.5" fill="currentColor" opacity="0.15"></circle>
+        <circle cx="5.64" cy="5.64" r="1.5" fill="currentColor" opacity="0.15"></circle>
       </svg>`
     }
 
     const result = await fetchDefinitionForSearch(query)
     if (widgetInstance !== widget) return
 
-    const searchIconHtml = `<svg class="bodhi-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <circle cx="11" cy="11" r="7" stroke="#CCCCCC" stroke-width="1.4"
+    const searchIconHtml = `<svg class="bodhi-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--bodhi-ink-faint)">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.4"
         stroke-linecap="round" stroke-dasharray="1.8 2.8" fill="none"/>
       <line x1="16.5" y1="16.5" x2="21" y2="21"
-        stroke="#CCCCCC" stroke-width="1.4" stroke-linecap="round"/>
+        stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
     </svg>`
 
     if (btn) { btn.style.pointerEvents = 'auto'; btn.innerHTML = searchIconHtml }
@@ -553,6 +647,7 @@ function buildHistoryView(history, currentWordId) {
     return `<div class="bodhi-history-entry ${isCurrent ? 'is-current' : ''}"
       data-word="${entry.word}" data-pos="${entry.pos || ''}"
       data-def="${encodeURIComponent(entry.definition || '')}"
+      data-source="${entry.source === 'search' ? 'search' : 'hotkey'}"
       title="${entry.source === 'hotkey' ? 'Looked up via ⌘B' : 'Looked up via search box'}">
       ${icon}
       <span class="bodhi-history-word ${isCurrent ? 'is-current' : ''}">${entry.word}</span>
@@ -562,10 +657,12 @@ function buildHistoryView(history, currentWordId) {
   }).join('')
 }
 
-const MOTION_FAST_MS = 160
-const MOTION_BASE_MS = 200
+const MOTION_FAST_MS = 140
+const MOTION_BASE_MS = 220
+const MOTION_CLOSE_MS = 140
 
 function mountWidget(widget) {
+  applyThemeToElement(widget)
   widget.classList.add('bodhi-widget-enter')
   document.body.appendChild(widget)
   widgetInstance = widget
@@ -606,14 +703,9 @@ async function showSkeleton() {
   widget.style.left = position.left + 'px'
 
   widget.innerHTML = `
-    <button class="bodhi-close" aria-label="Close Bodhi">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
+    ${toolbarHtml()}
     <div class="bodhi-panel">
-      <div class="bodhi-skeleton" style="padding-right:16px; padding-top:4px;">
+      <div class="bodhi-skeleton">
         ${dotsRow(10, 0)}
         ${dotsRow(5, 1)}
         ${dotsRow(14, 2)}
@@ -641,17 +733,15 @@ async function showSearchResult(word, partOfSpeech, definition) {
   widget.style.left = position.left + 'px'
 
   widget.innerHTML = `
-    <button class="bodhi-close" aria-label="Close Bodhi">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-    <div class="bodhi-panel" style="padding-right: 16px;">
-      <div class="bodhi-word"><span>${word}</span></div>
+    ${toolbarHtml()}
+    <div class="bodhi-panel">
+      <div class="bodhi-word-row">
+        <div class="bodhi-word"><span>${word}</span></div>
+        ${methodBadgeHtml('search')}
+      </div>
       ${partOfSpeech ? `<div class="bodhi-pos">${partOfSpeech}</div>` : ''}
       <div class="bodhi-definition">${definition}</div>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0;text-align:center;">
+      <div class="bodhi-footer-link">
         <button class="bodhi-search-link" data-action="search-another">search another →</button>
       </div>
     </div>
@@ -677,13 +767,8 @@ async function showSearchBox(message) {
   widget.style.left = position.left + 'px'
 
   widget.innerHTML = `
-    <button class="bodhi-close" aria-label="Close Bodhi">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-    <div class="bodhi-panel" style="padding-top: 8px;">
+    ${toolbarHtml()}
+    <div class="bodhi-panel">
       <p class="bodhi-search-hint">${message}</p>
       ${buildSearchBoxHtml()}
     </div>
@@ -714,7 +799,7 @@ function buildUnavailableActions(actions) {
   return parts.join('')
 }
 
-function createWidget(word, partOfSpeech, definition, state, history, currentWordId, reason = null) {
+function createWidget(word, partOfSpeech, definition, state, history, currentWordId, reason = null, source = 'hotkey') {
   const widget = document.createElement('div')
   widget.className = 'bodhi-widget'
   const position = getStoredPosition() || getDefaultPosition()
@@ -723,30 +808,14 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
 
   const showHistoryBtn = history && history.length > 0 && state !== 'skeleton'
 
-  const closeBtnHtml = `
-    <button class="bodhi-close" aria-label="Close Bodhi">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-  `
-
-  const historyBtnHtml = showHistoryBtn ? `
-    <button class="bodhi-history-btn" data-action="open-history" title="Session history" aria-label="Session history">
-      ${historyClockSvg()}
-    </button>
-  ` : ''
-
   const nextBtnHtml = `
-    <button class="bodhi-thumb" data-feedback="next" aria-label="Next word" style="padding:4px !important;">
-      <svg class="bodhi-next-icon" width="26" height="26" viewBox="0 0 24 24" fill="none"
-        style="transition:transform 0.5s ease;display:block;">
+    <button class="bodhi-thumb" data-feedback="next" aria-label="Next word">
+      <svg class="bodhi-next-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M 21 12 A 9 9 0 1 1 17 4.5"
-          stroke="#CCCCCC" stroke-width="1.5"
+          stroke="currentColor" stroke-width="1.5"
           stroke-linecap="round" stroke-dasharray="2 2.8" fill="none"/>
         <polyline points="14,2 17.2,4.6 14.8,7.8"
-          stroke="#CCCCCC" stroke-width="1.5"
+          stroke="currentColor" stroke-width="1.5"
           stroke-linecap="round" stroke-linejoin="round"
           stroke-dasharray="1.6 2.4" fill="none"/>
       </svg>
@@ -758,38 +827,39 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
   if (state === 'unavailable') {
     const copy = UNAVAILABLE_COPY[reason] || UNAVAILABLE_COPY.LOOKUP_FAILED
     content = `
-      ${closeBtnHtml}${historyBtnHtml}
-      <div class="bodhi-unavailable" data-reason="${reason || ''}" style="padding-top:8px;padding-right:48px;">
+      ${toolbarHtml({ showHistory: showHistoryBtn })}
+      <div class="bodhi-unavailable" data-reason="${reason || ''}">
         <p class="bodhi-unavailable-title">${copy.title}</p>
         <p class="bodhi-unavailable-body">
           ${copy.body}
         </p>
-        <div class="bodhi-unavail-actions" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div class="bodhi-unavail-actions">
           ${buildUnavailableActions(copy.actions)}
         </div>
       </div>
     `
   } else {
     content = `
-      ${closeBtnHtml}${historyBtnHtml}
-      <div style="padding-right:16px;">
+      ${toolbarHtml({ showHistory: showHistoryBtn })}
+      <div class="bodhi-word-row">
         <div class="bodhi-word">
           <span class="bodhi-selectable">${word}</span>
         </div>
-        ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
-        <div class="bodhi-definition bodhi-selectable">
-          ${definition}
-        </div>
+        ${methodBadgeHtml(source)}
+      </div>
+      ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
+      <div class="bodhi-definition bodhi-selectable">
+        ${definition}
       </div>
       <div class="bodhi-feedback">
         <svg class="bodhi-divider" height="10" viewBox="0 0 240 10"
           xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
           <line x1="0" y1="5" x2="240" y2="5"
-            stroke="#E8E8E8" stroke-width="1.8"
+            stroke="currentColor" stroke-width="1.8"
             stroke-linecap="round" stroke-dasharray="2 5.5"/>
         </svg>
         <div class="bodhi-action-row">
-          ${hasMoreWords() ? `${nextBtnHtml}` : `<button class="bodhi-search-link" data-action="open-search" style="flex:1 !important;text-align:center !important;">search a word →</button>`}
+          ${hasMoreWords() ? `${nextBtnHtml}` : `<button class="bodhi-search-link" data-action="open-search">search a word →</button>`}
         </div>
       </div>
     `
@@ -797,24 +867,11 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
 
   const historyViewHtml = `
     <div class="bodhi-history-view is-hidden">
-      <button class="bodhi-back" aria-label="Back">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <polyline points="15,6 9,12 15,18"
-            stroke="#111111" stroke-width="1.5"
-            stroke-linecap="round" stroke-linejoin="round"
-            stroke-dasharray="2 2.5"/>
-        </svg>
-      </button>
-      <button class="bodhi-close" aria-label="Close Bodhi">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+      ${toolbarHtml({ showBack: true })}
       <div class="bodhi-history-title">session history</div>
-      <svg style="width:100%;display:block;" height="10" viewBox="0 0 240 10" preserveAspectRatio="none">
+      <svg class="bodhi-divider" height="10" viewBox="0 0 240 10" preserveAspectRatio="none">
         <line x1="0" y1="5" x2="240" y2="5"
-          stroke="#E8E8E8" stroke-width="1.8"
+          stroke="currentColor" stroke-width="1.8"
           stroke-linecap="round" stroke-dasharray="2 5.5"/>
       </svg>
       <div class="bodhi-history-list">
@@ -829,8 +886,6 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
 
   widget.querySelectorAll('.bodhi-close').forEach(btn => {
     btn.addEventListener('click', () => { hideWidget(); clearSession() })
-    btn.addEventListener('mouseenter', () => { btn.style.opacity = '1' })
-    btn.addEventListener('mouseleave', () => { btn.style.opacity = '0.6' })
   })
 
   const backBtn = widget.querySelector('.bodhi-back')
@@ -865,21 +920,22 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
       const w = entry.dataset.word
       const p = entry.dataset.pos
       const d = decodeURIComponent(entry.dataset.def)
+      const src = entry.dataset.source === 'search' ? 'search' : 'hotkey'
       if (w && d) {
-        const wordEl = widget.querySelector('.bodhi-selectable')
-        const posEl = widget.querySelector('.bodhi-pos')
-        const defEl = widget.querySelector('.bodhi-definition')
+        const wordEl = widget.querySelector('.bodhi-main-view .bodhi-selectable')
+        const posEl = widget.querySelector('.bodhi-main-view .bodhi-pos')
+        const defEl = widget.querySelector('.bodhi-main-view .bodhi-definition')
+        const methodEl = widget.querySelector('.bodhi-main-view .bodhi-method')
         if (wordEl) wordEl.textContent = w
         if (posEl) posEl.textContent = p
         if (defEl) defEl.textContent = d
+        if (methodEl) methodEl.outerHTML = methodBadgeHtml(src)
         swapInnerViews(
           widget.querySelector('.bodhi-history-view'),
           widget.querySelector('.bodhi-main-view'),
         )
       }
     })
-    entry.addEventListener('mouseenter', () => { entry.style.background = '#F5F5F5' })
-    entry.addEventListener('mouseleave', () => { entry.style.background = 'transparent' })
   })
 
   const historyList = widget.querySelector('.bodhi-history-list')
@@ -893,12 +949,12 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
       if (e.key === 'ArrowDown') {
         e.preventDefault(); e.stopPropagation()
         activeHistoryIdx = Math.min(activeHistoryIdx + 1, entries.length - 1)
-        entries.forEach((el, i) => el.style.background = i === activeHistoryIdx ? '#F5F5F5' : '')
+        entries.forEach((el, i) => el.classList.toggle('bodhi-suggestion-active', i === activeHistoryIdx))
         entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
       } else if (e.key === 'ArrowUp') {
         e.preventDefault(); e.stopPropagation()
         activeHistoryIdx = Math.max(activeHistoryIdx - 1, 0)
-        entries.forEach((el, i) => el.style.background = i === activeHistoryIdx ? '#F5F5F5' : '')
+        entries.forEach((el, i) => el.classList.toggle('bodhi-suggestion-active', i === activeHistoryIdx))
         entries[activeHistoryIdx]?.scrollIntoView({ block: 'nearest' })
       } else if (e.key === 'Enter' && activeHistoryIdx >= 0) {
         e.preventDefault(); e.stopPropagation()
@@ -927,7 +983,7 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
         svg.style.transition = 'none'; svg.style.transform = 'rotate(0deg)'
         svg.getBoundingClientRect()
         svg.style.transition = 'transform 0.5s ease'; svg.style.transform = 'rotate(360deg)'
-        svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', '#111111'))
+        svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', 'currentColor'))
         setTimeout(() => {
           svg.querySelectorAll('path, polyline').forEach(el => el.setAttribute('stroke', '#CCCCCC'))
           nextBtn.dataset.spinning = 'false'
@@ -974,12 +1030,12 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
   return widget
 }
 
-async function showWidget(word, partOfSpeech, definition, widgetState, history = [], currentWordId = null, reason = null) {
+async function showWidget(word, partOfSpeech, definition, widgetState, history = [], currentWordId = null, reason = null, source = 'hotkey') {
   if (!settings.enabled) return;
 
   if (autoDismissTimer) { clearTimeout(autoDismissTimer); autoDismissTimer = null }
   await hideWidget()
-  const widget = createWidget(word, partOfSpeech, definition, widgetState, history, currentWordId, reason)
+  const widget = createWidget(word, partOfSpeech, definition, widgetState, history, currentWordId, reason, source)
   mountWidget(widget)
 
   if (settings.autoDismiss) {
@@ -1010,7 +1066,7 @@ function hideWidget() {
     setTimeout(() => {
       el.remove()
       resolve()
-    }, MOTION_FAST_MS)
+    }, MOTION_CLOSE_MS)
   })
 }
 
@@ -1117,9 +1173,12 @@ function addDragOverlay(element) {
   rect.setAttribute('x', '1.5'); rect.setAttribute('y', '1.5')
   rect.setAttribute('width', w - 3); rect.setAttribute('height', h - 3)
   rect.setAttribute('rx', '14.5'); rect.setAttribute('ry', '14.5')
-  rect.setAttribute('fill', 'none'); rect.setAttribute('stroke', '#CCCCCC')
-  rect.setAttribute('stroke-width', '1.5'); rect.setAttribute('stroke-dasharray', '2 4.5')
+  rect.setAttribute('fill', 'none')
+  rect.setAttribute('stroke', 'currentColor')
+  rect.setAttribute('stroke-width', '1.5')
+  rect.setAttribute('stroke-dasharray', '2 4.5')
   rect.setAttribute('stroke-linecap', 'round')
+  svg.style.color = 'var(--bodhi-ink-faint)'
   svg.appendChild(rect); element.appendChild(svg)
 }
 
@@ -1206,6 +1265,7 @@ function onVideoChange() { hideWidget(); clearSession() }
 
 function init() {
   loadSettings()
+  initThemeListeners()
   loadSpellChecker()
   document.addEventListener('keydown', handleKeydown, true)
   transcriptManager.init()

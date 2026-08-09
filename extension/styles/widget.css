@@ -1,3 +1,5 @@
+/* Bodhi widget — shared tokens (light/dark). Spacing scale: 4/8/12/16/24 */
+
 .bodhi-selectable {
   cursor: text !important;
   user-select: text !important;
@@ -10,6 +12,7 @@
   border: none !important;
   cursor: pointer !important;
   outline: none !important;
+  font: inherit !important;
 }
 
 .bodhi-widget svg {
@@ -17,48 +20,94 @@
 }
 
 .bodhi-widget {
-  --bodhi-ink-primary: #111111;
-  --bodhi-ink-body: #333333;
-  --bodhi-ink-secondary: #555555;
-  --bodhi-ink-muted: #666666;
-  --bodhi-ink-disabled: #999999;
-  --bodhi-ink-correction: #8A5A5A;
-  --bodhi-motion-fast: 160ms;
-  --bodhi-motion-base: 200ms;
-  --bodhi-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --bodhi-space-1: 4px;
+  --bodhi-space-2: 8px;
+  --bodhi-space-3: 12px;
+  --bodhi-space-4: 16px;
+  --bodhi-space-5: 24px;
 
-  font-family: 'Doto', sans-serif !important;
+  --bodhi-canvas: #F7F7F5;
+  --bodhi-surface: #FFFFFF;
+  --bodhi-ink: #141414;
+  --bodhi-ink-soft: #5C5C5C;
+  --bodhi-ink-faint: #8A8A8A;
+  --bodhi-line: #E6E6E4;
+  --bodhi-accent: #2F6FED;
+  --bodhi-hover: #F2F2F0;
+  --bodhi-scrim: rgba(255, 255, 255, 0.72);
+  --bodhi-shadow: 0 8px 28px rgba(20, 20, 20, 0.12);
+
+  /* legacy aliases used by older rules */
+  --bodhi-ink-primary: var(--bodhi-ink);
+  --bodhi-ink-body: var(--bodhi-ink);
+  --bodhi-ink-secondary: var(--bodhi-ink-soft);
+  --bodhi-ink-muted: var(--bodhi-ink-faint);
+  --bodhi-ink-disabled: #A8A8A8;
+  --bodhi-ink-correction: #9A5B5B;
+
+  --bodhi-font-display: 'Doto', sans-serif;
+  --bodhi-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --bodhi-motion-open: 220ms;
+  --bodhi-motion-close: 140ms;
+  --bodhi-motion-fast: 140ms;
+  --bodhi-motion-base: 220ms;
+  --bodhi-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --bodhi-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  font-family: var(--bodhi-font-body) !important;
+  color: var(--bodhi-ink) !important;
   position: fixed !important;
   z-index: 9999999 !important;
-  background: white !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
-  padding: 20px 24px !important;
-  width: 280px !important;
+  background: var(--bodhi-surface) !important;
+  border: 1px solid var(--bodhi-line) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--bodhi-shadow) !important;
+  padding: var(--bodhi-space-3) var(--bodhi-space-4) var(--bodhi-space-4) !important;
+  width: 268px !important;
   max-width: 90vw !important;
   max-height: 80vh !important;
   overflow: hidden !important;
   user-select: none !important;
-  transition:
-    opacity var(--bodhi-motion-fast) var(--bodhi-ease),
-    transform var(--bodhi-motion-base) var(--bodhi-ease),
-    box-shadow var(--bodhi-motion-base) var(--bodhi-ease) !important;
+  -webkit-font-smoothing: antialiased !important;
+  backdrop-filter: none !important;
+}
+
+.bodhi-widget[data-bodhi-theme='dark'] {
+  --bodhi-canvas: #121214;
+  --bodhi-surface: #1C1C1F;
+  --bodhi-ink: #F0F0F2;
+  --bodhi-ink-soft: #A0A0A6;
+  --bodhi-ink-faint: #7A7A82;
+  --bodhi-line: #2E2E32;
+  --bodhi-accent: #7BA3F7;
+  --bodhi-hover: #26262A;
+  --bodhi-scrim: rgba(28, 28, 31, 0.78);
+  --bodhi-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+  --bodhi-ink-disabled: #6A6A72;
+  --bodhi-ink-correction: #C98989;
 }
 
 .bodhi-widget.bodhi-widget-enter {
   opacity: 0 !important;
-  transform: translateY(4px) !important;
+  transform: translateY(8px) scale(0.985) !important;
 }
 
 .bodhi-widget.bodhi-widget-enter-active {
   opacity: 1 !important;
-  transform: translateY(0) !important;
+  transform: translateY(0) scale(1) !important;
+  transition:
+    opacity var(--bodhi-motion-open) var(--bodhi-ease),
+    transform var(--bodhi-motion-open) var(--bodhi-ease) !important;
 }
 
 .bodhi-widget.bodhi-widget-exit {
   opacity: 0 !important;
-  transform: translateY(4px) !important;
+  transform: translateY(4px) scale(0.99) !important;
   pointer-events: none !important;
+  transition:
+    opacity var(--bodhi-motion-close) var(--bodhi-ease-exit),
+    transform var(--bodhi-motion-close) var(--bodhi-ease-exit) !important;
 }
 
 .bodhi-panel {
@@ -67,11 +116,7 @@
     transform var(--bodhi-motion-fast) var(--bodhi-ease) !important;
 }
 
-.bodhi-panel.bodhi-panel-exit {
-  opacity: 0 !important;
-  transform: translateY(4px) !important;
-}
-
+.bodhi-panel.bodhi-panel-exit,
 .bodhi-panel.bodhi-panel-enter {
   opacity: 0 !important;
   transform: translateY(4px) !important;
@@ -84,7 +129,7 @@
 
 .bodhi-main-view,
 .bodhi-history-view {
-  transition: opacity var(--bodhi-motion-base) var(--bodhi-ease) !important;
+  transition: opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
 }
 
 .bodhi-main-view.is-hidden,
@@ -96,209 +141,404 @@
 .bodhi-history-view.is-fading {
   opacity: 0 !important;
 }
+
 .bodhi-widget.bodhi-search-expanded {
-  width: 300px !important;
+  width: 288px !important;
   overflow: visible !important;
 }
-.bodhi-widget-dragging {
-  opacity: 0.96 !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.14) !important;
-  transform: scale(1.015) !important;
-  transform-origin: center !important;
+
+/* Drag: see captions through widget (~62%) + light scrim so type stays readable */
+.bodhi-widget.bodhi-widget-dragging {
+  opacity: 0.62 !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18) !important;
   cursor: grabbing !important;
+  transition: opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  background: var(--bodhi-scrim) !important;
 }
+
 .bodhi-drag-overlay {
   position: absolute !important;
-  top: 0 !important; left: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
   pointer-events: none !important;
   z-index: 1 !important;
   overflow: visible !important;
 }
-.bodhi-widget * { box-sizing: border-box !important; }
-.bodhi-close {
-  position: absolute !important;
-  top: 14px !important; right: 16px !important;
-  background: none !important; border: none !important;
-  color: var(--bodhi-ink-primary) !important; cursor: pointer !important;
-  padding: 4px !important; border-radius: 4px !important;
-  opacity: 0.6 !important;
-  transition: opacity 0.15s ease !important;
+
+.bodhi-widget * {
+  box-sizing: border-box !important;
 }
-.bodhi-close:hover { opacity: 1 !important; }
-.bodhi-back {
-  position: absolute !important;
-  top: 14px !important; left: 16px !important;
-  background: none !important; border: none !important;
-  color: var(--bodhi-ink-primary) !important; cursor: pointer !important;
-  padding: 4px !important; border-radius: 4px !important;
-  opacity: 0.55 !important;
-  transition: opacity 0.15s ease !important;
+
+/* Toolbar: single flex row — fixes absolute X / history misalignment */
+.bodhi-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: var(--bodhi-space-2) !important;
+  margin: calc(-1 * var(--bodhi-space-1)) calc(-1 * var(--bodhi-space-1)) var(--bodhi-space-2) !important;
+  min-height: 28px !important;
 }
-.bodhi-back:hover { opacity: 1 !important; }
+
+.bodhi-toolbar-spacer {
+  flex: 1 !important;
+}
+
+.bodhi-toolbar-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-1) !important;
+  margin-left: auto !important;
+}
+
+.bodhi-close,
+.bodhi-back,
+.bodhi-history-btn {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  color: var(--bodhi-ink-soft) !important;
+  opacity: 1 !important;
+  transition: background-color var(--bodhi-motion-fast) var(--bodhi-ease), color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+}
+
+.bodhi-close:hover,
+.bodhi-back:hover,
+.bodhi-history-btn:hover {
+  background-color: var(--bodhi-hover) !important;
+  color: var(--bodhi-ink) !important;
+}
+
+.bodhi-history-btn {
+  line-height: 0 !important;
+}
+
+.bodhi-history-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
 .bodhi-feedback {
-  margin-top: 16px !important;
+  margin-top: var(--bodhi-space-3) !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  gap: 10px !important;
+  gap: var(--bodhi-space-2) !important;
 }
+
 .bodhi-divider {
   width: 100% !important;
   display: block !important;
   overflow: visible !important;
-  margin-bottom: 4px !important;
+  margin-bottom: 0 !important;
+  color: var(--bodhi-line) !important;
 }
+
+.bodhi-divider line {
+  stroke: currentColor !important;
+}
+
 .bodhi-action-row {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 4px !important;
+  gap: var(--bodhi-space-1) !important;
   width: 100% !important;
   position: relative !important;
 }
+
 .bodhi-thumb {
-  background: none !important; border: none !important;
-  cursor: pointer !important; padding: 8px !important;
+  padding: var(--bodhi-space-2) !important;
   border-radius: 6px !important;
-  transition: background-color 0.15s ease !important;
-  color: var(--bodhi-ink-muted) !important;
+  transition: background-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  color: var(--bodhi-ink-faint) !important;
 }
-.bodhi-thumb:hover { background-color: #f8f9fa !important; }
-.bodhi-history-btn {
-  background: none !important; border: none !important;
-  cursor: pointer !important; padding: 8px !important;
-  border-radius: 6px !important;
-  transition: background-color 0.15s ease !important;
-  color: var(--bodhi-ink-muted) !important; line-height: 0 !important;
-  position: absolute !important;
-  top: 14px !important;
-  right: 44px !important;
+
+.bodhi-thumb:hover {
+  background-color: var(--bodhi-hover) !important;
 }
-.bodhi-history-btn:hover { background-color: #f8f9fa !important; }
+
+.bodhi-word-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: var(--bodhi-space-2) !important;
+  margin-bottom: var(--bodhi-space-1) !important;
+}
+
+.bodhi-word {
+  font-family: var(--bodhi-font-display) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--bodhi-ink) !important;
+  margin: 0 !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.bodhi-method {
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  margin-top: 2px !important;
+  color: var(--bodhi-ink-faint) !important;
+  border-radius: 5px !important;
+}
+
+.bodhi-method svg {
+  color: inherit !important;
+}
+
 .bodhi-definition {
-  font-size: 14px !important; line-height: 1.6 !important;
-  color: var(--bodhi-ink-body) !important; margin: 0 !important;
-}
-.bodhi-pos {
-  font-size: 13px !important; font-style: italic !important;
-  color: var(--bodhi-ink-secondary) !important; margin: 0 0 14px 0 !important;
-}
-.bodhi-search-link {
-  font-family: 'Doto', sans-serif !important;
-  font-size: 12px !important; color: var(--bodhi-ink-secondary) !important;
-  text-align: center !important; margin: 0 !important;
-  cursor: pointer !important; text-decoration: underline !important;
-  text-underline-offset: 3px !important;
-  transition: color 0.15s ease !important;
-  display: block !important;
-  background: none !important; border: none !important;
-  width: 100% !important; padding: 0 !important;
-}
-.bodhi-search-link:hover { color: var(--bodhi-ink-primary) !important; }
-.bodhi-search-hint {
-  font-family: 'Doto', sans-serif !important;
-  font-size: 12px !important; color: var(--bodhi-ink-secondary) !important;
-  text-align: center !important; margin: 0 0 10px 0 !important;
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 13px !important;
   line-height: 1.5 !important;
+  color: var(--bodhi-ink) !important;
+  margin: 0 !important;
 }
-.bodhi-search-wrap { width: 100% !important; }
+
+.bodhi-pos {
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 12px !important;
+  font-style: italic !important;
+  color: var(--bodhi-ink-soft) !important;
+  margin: 0 0 var(--bodhi-space-2) 0 !important;
+}
+
+.bodhi-search-link {
+  font-family: var(--bodhi-font-display) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  color: var(--bodhi-ink-soft) !important;
+  text-align: center !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  transition: color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 0 !important;
+  letter-spacing: 0.04em !important;
+}
+
+.bodhi-search-link:hover {
+  color: var(--bodhi-ink) !important;
+}
+
+.bodhi-search-hint {
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 12px !important;
+  color: var(--bodhi-ink-soft) !important;
+  text-align: center !important;
+  margin: 0 0 var(--bodhi-space-3) 0 !important;
+  line-height: 1.45 !important;
+}
+
+.bodhi-search-wrap {
+  width: 100% !important;
+}
+
 .bodhi-search-row {
-  display: flex !important; align-items: center !important;
-  border: 1.5px solid #E8E8E8 !important;
+  display: flex !important;
+  align-items: center !important;
+  border: 1.5px solid var(--bodhi-line) !important;
   border-radius: 999px !important;
-  padding: 10px 14px 10px 18px !important;
-  background: #FFFFFF !important; gap: 8px !important;
-  transition: border-color 0.2s ease !important;
+  padding: var(--bodhi-space-2) var(--bodhi-space-3) var(--bodhi-space-2) var(--bodhi-space-4) !important;
+  background: var(--bodhi-surface) !important;
+  gap: var(--bodhi-space-2) !important;
+  transition: border-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
 }
-.bodhi-search-row.bodhi-search-focused { border-color: var(--bodhi-ink-muted) !important; }
+
+.bodhi-search-row.bodhi-search-focused {
+  border-color: var(--bodhi-ink-faint) !important;
+}
+
 .bodhi-dotted-spinner {
-  width: 18px; height: 18px;
+  width: 18px;
+  height: 18px;
   animation: bodhi-spin-step 0.8s steps(8) infinite;
 }
-@keyframes bodhi-spin-step { 100% { transform: rotate(360deg); } }
+
+@keyframes bodhi-spin-step {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .bodhi-search-input {
-  flex: 1 !important; border: none !important; outline: none !important;
-  padding: 0 !important; font-family: 'Doto', sans-serif !important;
-  font-size: 14px !important; color: var(--bodhi-ink-body) !important;
-  background: transparent !important; letter-spacing: 0.03em !important;
+  flex: 1 !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 14px !important;
+  color: var(--bodhi-ink) !important;
+  background: transparent !important;
 }
-.bodhi-search-input::placeholder { color: var(--bodhi-ink-muted) !important; }
+
+.bodhi-search-input::placeholder {
+  color: var(--bodhi-ink-faint) !important;
+}
+
 .bodhi-search-btn {
-  background: none !important; border: none !important;
-  padding: 0 !important; cursor: pointer !important;
-  display: flex !important; align-items: center !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
   flex-shrink: 0 !important;
+  color: var(--bodhi-ink-faint) !important;
 }
+
 .bodhi-suggestions-panel {
-  overflow: hidden !important; max-height: 0px !important;
+  overflow: hidden !important;
+  max-height: 0 !important;
   opacity: 0 !important;
-  transition: max-height var(--bodhi-motion-base) var(--bodhi-ease), opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
-  background: #FFFFFF !important; border-radius: 0 0 12px 12px !important;
+  transition:
+    max-height var(--bodhi-motion-base) var(--bodhi-ease),
+    opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  background: var(--bodhi-surface) !important;
+  border-radius: 0 0 12px 12px !important;
 }
+
 .bodhi-suggestions-panel.bodhi-suggestions-open {
-  opacity: 1 !important; max-height: 400px !important;
+  opacity: 1 !important;
+  max-height: 400px !important;
 }
+
 .bodhi-suggestions-scroll {
-  max-height: 114px !important; overflow-y: auto !important;
+  max-height: 114px !important;
+  overflow-y: auto !important;
   scrollbar-width: none !important;
 }
-.bodhi-suggestions-scroll::-webkit-scrollbar { display: none !important; }
-.bodhi-suggestions-section { padding-top: 14px !important; }
+
+.bodhi-suggestions-scroll::-webkit-scrollbar {
+  display: none !important;
+}
+
+.bodhi-suggestions-section {
+  padding-top: var(--bodhi-space-3) !important;
+}
+
 .bodhi-suggestions-label {
-  display: flex !important; align-items: center !important;
-  gap: 8px !important; margin-bottom: 4px !important; padding: 0 2px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-2) !important;
+  margin-bottom: var(--bodhi-space-1) !important;
+  padding: 0 2px !important;
 }
+
 .bodhi-suggestions-label-line {
-  flex: 1 !important; border: none !important;
-  border-top: 1px dashed #EEEEEE !important; margin: 0 !important;
+  flex: 1 !important;
+  border: none !important;
+  border-top: 1px dashed var(--bodhi-line) !important;
+  margin: 0 !important;
 }
-.bodhi-suggestions-label-line.correction { border-top-color: #F0E0E0 !important; }
+
 .bodhi-suggestions-label-text {
-  font-family: 'Doto', sans-serif !important; font-size: 10px !important;
-  color: var(--bodhi-ink-muted) !important; letter-spacing: 0.08em !important; white-space: nowrap !important;
+  font-family: var(--bodhi-font-display) !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  color: var(--bodhi-ink-faint) !important;
+  letter-spacing: 0.08em !important;
+  white-space: nowrap !important;
 }
-.bodhi-suggestions-label-text.correction { color: var(--bodhi-ink-correction) !important; }
+
+.bodhi-suggestions-label-text.correction {
+  color: var(--bodhi-ink-correction) !important;
+}
+
 .bodhi-suggestion-row {
-  display: flex !important; align-items: center !important;
-  gap: 10px !important; padding: 6px 8px !important;
-  border-radius: 8px !important; cursor: pointer !important;
-  background: transparent !important; transition: background 0.12s ease !important;
-  border: none !important; outline: none !important; width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-2) !important;
+  padding: var(--bodhi-space-2) !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  transition: background var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  width: 100% !important;
   text-align: left !important;
+  color: var(--bodhi-ink) !important;
 }
+
 .bodhi-suggestion-row:hover,
 .bodhi-suggestion-row.bodhi-suggestion-active {
-  background: #F6F6F6 !important;
-  border-left: 2px solid #E0E0E0 !important; padding-left: 6px !important;
+  background: var(--bodhi-hover) !important;
 }
+
 .bodhi-suggestion-word-correction {
-  font-family: 'Doto', sans-serif !important; font-size: 14px !important;
-  letter-spacing: 0.03em !important; color: var(--bodhi-ink-correction) !important;
+  font-family: var(--bodhi-font-display) !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: var(--bodhi-ink-correction) !important;
 }
+
 .bodhi-suggestions-hint {
-  padding-top: 10px !important; padding-bottom: 2px !important;
-  text-align: center !important; font-family: 'Doto', sans-serif !important;
-  font-size: 10px !important; color: var(--bodhi-ink-muted) !important;
-  letter-spacing: 0.07em !important; display: block !important;
+  padding-top: var(--bodhi-space-2) !important;
+  text-align: center !important;
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 10px !important;
+  color: var(--bodhi-ink-faint) !important;
+  letter-spacing: 0.04em !important;
+  display: block !important;
 }
+
 .bodhi-skeleton {
-  display: flex !important; flex-direction: column !important;
-  gap: 12px !important; padding: 4px 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--bodhi-space-3) !important;
+  padding: var(--bodhi-space-2) 0 !important;
 }
-.bodhi-skeleton-row { display: flex !important; align-items: center !important; gap: 5px !important; }
+
+.bodhi-skeleton-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-1) !important;
+}
+
 .bodhi-skeleton-dot {
-  width: 5px !important; height: 5px !important;
-  border-radius: 50% !important; background: #E0E0E0 !important;
-  flex-shrink: 0 !important; animation: bodhi-dot-pulse 1.3s ease-in-out infinite !important;
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  background: var(--bodhi-ink-soft) !important;
+  flex-shrink: 0 !important;
+  animation: bodhi-dot-pulse 1.2s ease-in-out infinite !important;
 }
+
 @keyframes bodhi-dot-pulse {
-  0%, 100% { opacity: 0.2; transform: scale(0.8); }
-  50%       { opacity: 1.0; transform: scale(1.0); }
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
 @keyframes bodhi-ccw-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(-360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
 }
+
 .bodhi-history-hands-spin {
   animation: bodhi-ccw-spin 0.55s linear forwards !important;
   transform-origin: 12px 12px !important;
@@ -306,72 +546,105 @@
 }
 
 .bodhi-history-title {
-  text-align: center !important; padding: 2px 0 12px !important;
-  font-family: 'Doto', sans-serif !important; font-size: 11px !important;
-  color: var(--bodhi-ink-secondary) !important; letter-spacing: 0.10em !important;
+  text-align: center !important;
+  padding: 0 0 var(--bodhi-space-2) !important;
+  font-family: var(--bodhi-font-display) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  color: var(--bodhi-ink-soft) !important;
+  letter-spacing: 0.1em !important;
   text-transform: uppercase !important;
 }
+
 .bodhi-history-list {
-  margin-top: 6px !important; max-height: 240px !important;
-  overflow-y: auto !important; scrollbar-width: none !important;
-}
-.bodhi-history-list::-webkit-scrollbar { display: none !important; }
-.bodhi-history-entry {
-  display: flex !important; align-items: center !important;
-  gap: 8px !important; padding: 6px 6px !important;
-  border-radius: 7px !important; cursor: pointer !important;
-  transition: background 0.12s ease !important;
-  border-left: 2px solid transparent !important;
-}
-.bodhi-history-entry:hover { background: #F5F5F5 !important; }
-.bodhi-history-entry.is-current { border-left-color: #DEDEDE !important; }
-.bodhi-history-word {
-  font-family: 'Doto', sans-serif !important; font-size: 14px !important;
-  flex: 1 !important; letter-spacing: 0.02em !important; color: var(--bodhi-ink-muted) !important;
-}
-.bodhi-history-word.is-current { color: var(--bodhi-ink-body) !important; }
-.bodhi-history-pos {
-  font-family: 'Doto', sans-serif !important; font-size: 9px !important;
-  color: var(--bodhi-ink-muted) !important; font-style: italic !important;
-  flex-shrink: 0 !important; letter-spacing: 0.04em !important;
-}
-.bodhi-unavail-actions {
-  display: flex !important; flex-direction: column !important;
-  align-items: center !important; gap: 8px !important;
+  margin-top: var(--bodhi-space-2) !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
 }
 
-.bodhi-word {
-  font-family: 'Doto', sans-serif !important;
-  margin-bottom: 6px !important;
-  font-size: 26px !important;
-  font-weight: bold !important;
-  line-height: 1.2 !important;
-  color: var(--bodhi-ink-primary) !important;
+.bodhi-history-list::-webkit-scrollbar {
+  display: none !important;
+}
+
+.bodhi-history-entry {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-2) !important;
+  padding: var(--bodhi-space-2) !important;
+  border-radius: 7px !important;
+  cursor: pointer !important;
+  transition: background var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  border-left: 2px solid transparent !important;
+  color: var(--bodhi-ink-faint) !important;
+}
+
+.bodhi-history-entry:hover {
+  background: var(--bodhi-hover) !important;
+}
+
+.bodhi-history-entry.is-current {
+  border-left-color: var(--bodhi-line) !important;
+}
+
+.bodhi-history-word {
+  font-family: var(--bodhi-font-display) !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  flex: 1 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--bodhi-ink-faint) !important;
+}
+
+.bodhi-history-word.is-current {
+  color: var(--bodhi-ink) !important;
+}
+
+.bodhi-history-pos {
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 10px !important;
+  color: var(--bodhi-ink-faint) !important;
+  font-style: italic !important;
+  flex-shrink: 0 !important;
+}
+
+.bodhi-unavail-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: var(--bodhi-space-2) !important;
 }
 
 .bodhi-unavailable-title {
-  font-family: 'Doto', sans-serif !important;
+  font-family: var(--bodhi-font-display) !important;
   font-size: 15px !important;
-  font-weight: bold !important;
-  color: var(--bodhi-ink-primary) !important;
-  margin: 0 0 6px 0 !important;
+  font-weight: 700 !important;
+  color: var(--bodhi-ink) !important;
+  margin: 0 0 var(--bodhi-space-1) 0 !important;
   line-height: 1.3 !important;
   text-align: center !important;
 }
 
 .bodhi-unavailable-body {
-  font-family: 'Doto', sans-serif !important;
+  font-family: var(--bodhi-font-body) !important;
   font-size: 13px !important;
-  color: var(--bodhi-ink-muted) !important;
-  margin: 0 0 12px 0 !important;
-  line-height: 1.7 !important;
+  color: var(--bodhi-ink-soft) !important;
+  margin: 0 0 var(--bodhi-space-3) 0 !important;
+  line-height: 1.5 !important;
   text-align: center !important;
 }
 
 .bodhi-history-empty {
-  font-family: 'Doto', sans-serif !important;
+  font-family: var(--bodhi-font-body) !important;
   font-size: 12px !important;
-  color: var(--bodhi-ink-muted) !important;
+  color: var(--bodhi-ink-faint) !important;
   text-align: center !important;
-  padding: 16px 0 !important;
+  padding: var(--bodhi-space-4) 0 !important;
+}
+
+.bodhi-footer-link {
+  margin-top: var(--bodhi-space-3) !important;
+  padding-top: var(--bodhi-space-3) !important;
+  border-top: 1px solid var(--bodhi-line) !important;
+  text-align: center !important;
 }
