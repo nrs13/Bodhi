@@ -26,20 +26,21 @@
   --bodhi-space-4: 16px;
   --bodhi-space-5: 24px;
 
-  --bodhi-canvas: #F4F6FA;
-  --bodhi-surface: #FFFFFF;
-  --bodhi-ink: #12141A;
-  --bodhi-ink-soft: #5A6170;
-  --bodhi-ink-faint: #8B92A1;
-  --bodhi-line: #E2E6EE;
-  --bodhi-accent: #3B6CFF;
-  --bodhi-accent-soft: #E8EFFF;
-  --bodhi-signal: #14A37A;
-  --bodhi-caption: #5B6CFF;
-  --bodhi-search: #0F9B8E;
-  --bodhi-hover: #EEF1F7;
-  --bodhi-scrim: rgba(255, 255, 255, 0.72);
-  --bodhi-shadow: 0 8px 28px rgba(18, 20, 26, 0.12);
+  --bodhi-canvas: #F5F3F1;
+  --bodhi-surface: #FFFCFA;
+  --bodhi-ink: #1A1714;
+  --bodhi-ink-soft: #5E574F;
+  --bodhi-ink-faint: #8A8278;
+  --bodhi-line: #E6E0D8;
+  /* Oxidized copper — desaturated, editorial; not SaaS blue */
+  --bodhi-accent: #9A6B4F;
+  --bodhi-accent-soft: #F0E7DF;
+  --bodhi-signal: #6A8F7B;
+  --bodhi-caption: #8B6B7A;
+  --bodhi-search: #6B7F7A;
+  --bodhi-hover: #F1EBE4;
+  --bodhi-scrim: rgba(255, 252, 250, 0.72);
+  --bodhi-shadow: 0 8px 28px rgba(26, 23, 20, 0.10);
 
   --bodhi-ink-primary: var(--bodhi-ink);
   --bodhi-ink-body: var(--bodhi-ink);
@@ -78,22 +79,22 @@
 }
 
 .bodhi-widget[data-bodhi-theme='dark'] {
-  --bodhi-canvas: #14161C;
-  --bodhi-surface: #1B1E26;
-  --bodhi-ink: #F1F3F7;
-  --bodhi-ink-soft: #A4ABB8;
-  --bodhi-ink-faint: #7A8290;
-  --bodhi-line: #2C313C;
-  --bodhi-accent: #7B9CFF;
-  --bodhi-accent-soft: #243056;
-  --bodhi-signal: #2DD4A8;
-  --bodhi-caption: #8B9BFF;
-  --bodhi-search: #2BC4B4;
-  --bodhi-hover: #252933;
-  --bodhi-scrim: rgba(27, 30, 38, 0.78);
+  --bodhi-canvas: #161412;
+  --bodhi-surface: #1E1B18;
+  --bodhi-ink: #F3EEE8;
+  --bodhi-ink-soft: #B0A69A;
+  --bodhi-ink-faint: #7F766C;
+  --bodhi-line: #322C27;
+  --bodhi-accent: #C9956F;
+  --bodhi-accent-soft: #2A231E;
+  --bodhi-signal: #8FB59E;
+  --bodhi-caption: #C4A0AE;
+  --bodhi-search: #8FA9A3;
+  --bodhi-hover: #292421;
+  --bodhi-scrim: rgba(30, 27, 24, 0.78);
   --bodhi-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
-  --bodhi-ink-disabled: #6A6A72;
-  --bodhi-ink-correction: #E0A080;
+  --bodhi-ink-disabled: #6A635C;
+  --bodhi-ink-correction: #D4A090;
 }
 
 .bodhi-widget.bodhi-widget-enter {
@@ -348,17 +349,19 @@
   text-align: center !important;
   margin: 0 !important;
   cursor: pointer !important;
-  text-decoration: underline !important;
-  text-underline-offset: 3px !important;
-  transition: color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  text-decoration: none !important;
+  transition:
+    color var(--bodhi-motion-fast) var(--bodhi-ease),
+    opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
   display: block !important;
   width: 100% !important;
   padding: 0 !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.02em !important;
 }
 
 .bodhi-search-link:hover {
   color: var(--bodhi-ink) !important;
+  text-decoration: none !important;
 }
 
 .bodhi-search-hint {

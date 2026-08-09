@@ -29,20 +29,20 @@
       --bodhi-space-4: 16px;
       --bodhi-space-5: 24px;
 
-      --bodhi-canvas: #F4F6FA;
-      --bodhi-surface: #FFFFFF;
-      --bodhi-ink: #12141A;
-      --bodhi-ink-soft: #5A6170;
-      --bodhi-ink-faint: #8B92A1;
-      --bodhi-line: #E2E6EE;
-      --bodhi-hover: #EEF1F7;
+      --bodhi-canvas: #F5F3F1;
+      --bodhi-surface: #FFFCFA;
+      --bodhi-ink: #1A1714;
+      --bodhi-ink-soft: #5E574F;
+      --bodhi-ink-faint: #8A8278;
+      --bodhi-line: #E6E0D8;
+      --bodhi-hover: #F1EBE4;
 
-      /* Role accents — used sparingly */
-      --bodhi-accent: #3B6CFF;       /* interactive / focus */
-      --bodhi-accent-soft: #E8EFFF;  /* accent wash */
-      --bodhi-signal: #14A37A;      /* live / enabled */
-      --bodhi-caption: #5B6CFF;     /* caption-source cue */
-      --bodhi-search: #0F9B8E;      /* search-source cue */
+      /* Oxidized copper + quiet role cues — not SaaS cobalt */
+      --bodhi-accent: #9A6B4F;
+      --bodhi-accent-soft: #F0E7DF;
+      --bodhi-signal: #6A8F7B;
+      --bodhi-caption: #8B6B7A;
+      --bodhi-search: #6B7F7A;
 
       --bodhi-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       --bodhi-motion-fast: 140ms;
@@ -52,18 +52,18 @@
     }
 
     html[data-bodhi-theme="dark"] {
-      --bodhi-canvas: #14161C;
-      --bodhi-surface: #1B1E26;
-      --bodhi-ink: #F1F3F7;
-      --bodhi-ink-soft: #A4ABB8;
-      --bodhi-ink-faint: #7A8290;
-      --bodhi-line: #2C313C;
-      --bodhi-hover: #252933;
-      --bodhi-accent: #7B9CFF;
-      --bodhi-accent-soft: #243056;
-      --bodhi-signal: #2DD4A8;
-      --bodhi-caption: #8B9BFF;
-      --bodhi-search: #2BC4B4;
+      --bodhi-canvas: #161412;
+      --bodhi-surface: #1E1B18;
+      --bodhi-ink: #F3EEE8;
+      --bodhi-ink-soft: #B0A69A;
+      --bodhi-ink-faint: #7F766C;
+      --bodhi-line: #322C27;
+      --bodhi-hover: #292421;
+      --bodhi-accent: #C9956F;
+      --bodhi-accent-soft: #2A231E;
+      --bodhi-signal: #8FB59E;
+      --bodhi-caption: #C4A0AE;
+      --bodhi-search: #8FA9A3;
       --bodhi-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
     }
 
@@ -109,9 +109,9 @@
       position: absolute;
       top: 0;
       right: 0;
-      opacity: 0.35;
+      opacity: 0.28;
       pointer-events: none;
-      color: var(--bodhi-accent);
+      color: var(--bodhi-ink-faint);
     }
 
     .header-inner {
@@ -125,7 +125,7 @@
       display: flex;
       align-items: center;
       gap: var(--bodhi-space-2);
-      color: var(--bodhi-accent);
+      color: var(--bodhi-ink-faint);
     }
 
     .header-wordmark {
@@ -198,7 +198,7 @@
     .section-count {
       font-size: 11px;
       font-weight: 500;
-      color: var(--bodhi-accent);
+      color: var(--bodhi-ink-faint);
       margin-left: 2px;
     }
 
@@ -277,9 +277,9 @@
     .key {
       font-size: 11px;
       font-weight: 600;
-      color: var(--bodhi-accent);
-      background: var(--bodhi-accent-soft);
-      border: 1px solid transparent;
+      color: var(--bodhi-ink-soft);
+      background: var(--bodhi-hover);
+      border: 1px solid var(--bodhi-line);
       border-radius: 6px;
       padding: 3px 7px;
       white-space: nowrap;
@@ -333,7 +333,7 @@
     .lookup-item.active .lookup-item-inner,
     .lookup-item:hover .lookup-item-inner {
       background: var(--bodhi-hover);
-      border-left-color: var(--bodhi-accent);
+      border-left-color: var(--bodhi-line);
     }
 
     .lookup-item-left {
@@ -437,8 +437,8 @@
     .lookup-empty-icon {
       width: 28px;
       height: 28px;
-      color: var(--bodhi-accent);
-      opacity: 0.7;
+      color: var(--bodhi-ink-faint);
+      opacity: 0.85;
     }
 
     .lookup-empty-line1 {
@@ -494,8 +494,8 @@
     }
 
     .nav-btn:hover:not(:disabled) {
-      color: var(--bodhi-accent);
-      background: var(--bodhi-accent-soft);
+      color: var(--bodhi-ink);
+      background: var(--bodhi-hover);
     }
 
     .nav-btn:disabled {
