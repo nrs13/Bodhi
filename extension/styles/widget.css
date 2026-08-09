@@ -742,13 +742,14 @@
   text-transform: uppercase !important;
 }
 
-/* Cap at 5 rows; thin themed scroll for the rest (no stable gutter) */
+/* Cap at 5 rows; thin overlay thumb (no classic gutter strip) */
 .bodhi-history-list {
   --bodhi-history-row-h: 40px;
   --bodhi-history-rows: 5;
   margin-top: var(--bodhi-space-1) !important;
   max-height: calc(var(--bodhi-history-row-h) * var(--bodhi-history-rows)) !important;
   box-sizing: border-box !important;
+  width: 100% !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
@@ -763,8 +764,8 @@
 }
 
 .bodhi-history-list::-webkit-scrollbar {
-  width: var(--bodhi-scroll-size) !important;
-  height: var(--bodhi-scroll-size) !important;
+  width: 3px !important;
+  height: 3px !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar-track {
@@ -790,13 +791,10 @@
 .bodhi-history-row {
   display: flex !important;
   flex-direction: column !important;
+  flex-shrink: 0 !important;
   border-radius: var(--bodhi-radius) !important;
-  /* Clip only the expanding def panel corners — not mid-glyph on the row */
-  overflow: visible !important;
-}
-
-.bodhi-history-row.is-expanded {
   overflow: hidden !important;
+  width: 100% !important;
 }
 
 .bodhi-widget button.bodhi-history-entry {
@@ -924,21 +922,29 @@
   opacity: 1 !important;
 }
 
-/* Inline definition — same pattern as popup recent lookups */
+/*
+  Inline definition — max-height accordion (not grid 0fr/1fr).
+  Inside a flex column, 1fr tracks resolve against an indefinite
+  height and stay at 0px, so expands never revealed the def.
+*/
 .bodhi-history-def {
-  display: grid !important;
-  grid-template-rows: 0fr !important;
-  transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease) !important;
+  display: block !important;
+  max-height: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
   background: var(--bodhi-canvas) !important;
+  transition:
+    max-height var(--bodhi-motion-base) var(--bodhi-ease),
+    opacity var(--bodhi-motion-fast) var(--bodhi-ease) !important;
 }
 
 .bodhi-history-row.is-expanded .bodhi-history-def {
-  grid-template-rows: 1fr !important;
+  max-height: 280px !important;
+  opacity: 1 !important;
 }
 
 .bodhi-history-def > p {
-  overflow: hidden !important;
-  min-height: 0 !important;
+  display: block !important;
   margin: 0 !important;
   padding: 0 var(--bodhi-space-3) 0 36px !important;
   font-family: var(--bodhi-font-body) !important;
@@ -947,6 +953,9 @@
   color: var(--bodhi-ink-soft) !important;
   -webkit-text-fill-color: var(--bodhi-ink-soft) !important;
   opacity: 1 !important;
+  visibility: visible !important;
+  white-space: normal !important;
+  overflow: visible !important;
 }
 
 .bodhi-history-row.is-expanded .bodhi-history-def > p {

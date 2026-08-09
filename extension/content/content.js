@@ -599,7 +599,10 @@ function toggleHistoryRowExpand(row, list) {
     row.classList.add('is-expanded')
     row.querySelector('.bodhi-history-entry')?.setAttribute('aria-expanded', 'true')
     row.querySelector('.bodhi-history-chevron')?.classList.add('open')
-    row.scrollIntoView({ block: 'nearest' })
+    // Keep expanded def in view inside the 5-row scrollport
+    requestAnimationFrame(() => {
+      row.scrollIntoView({ block: 'nearest' })
+    })
   }
 }
 
@@ -679,16 +682,18 @@ function bindHistoryListInteractions(widget, historyList) {
 
   historyList.addEventListener('click', (e) => {
     const entry = e.target.closest?.('.bodhi-history-entry')
+      || e.target.closest?.('.bodhi-history-row')?.querySelector?.('.bodhi-history-entry')
     if (!entry || !historyList.contains(entry)) return
     e.preventDefault()
     e.stopPropagation()
     pauseAutoDismiss()
     const row = entry.closest('.bodhi-history-row')
+    if (!row) return
     toggleHistoryRowExpand(row, historyList)
     const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
     const idx = rows.indexOf(row)
     if (idx >= 0) setHistoryKeyboardFocus(historyList, idx)
-  })
+  }, true)
 
   let activeHistoryIdx = -1
   historyList.addEventListener('keydown', (e) => {
