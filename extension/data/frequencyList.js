@@ -1,6 +1,4 @@
-// Generated from Google Web Corpus via Kaggle. Do not edit manually.
-// Total words: 100000
-// Source: unigram_freq.csv
+// Generated — do not edit.
 const FREQUENCY_LIST = {
   "the": 1,
   "of": 2,

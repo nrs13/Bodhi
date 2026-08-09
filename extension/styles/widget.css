@@ -1,5 +1,3 @@
-/* Bodhi widget — shared tokens (light/dark). Spacing scale: 4/8/12/16/24 */
-
 .bodhi-selectable {
   cursor: text !important;
   user-select: text !important;
@@ -24,7 +22,6 @@
   display: block !important;
 }
 
-/* Tokenized tip — replaces native title chrome */
 .bodhi-widget [data-bodhi-tip] {
   position: relative !important;
 }
@@ -32,7 +29,6 @@
 .bodhi-widget [data-bodhi-tip]::after {
   content: attr(data-bodhi-tip) !important;
   position: absolute !important;
-  /* Below + right-aligned so tip stays inside the 268px card */
   left: auto !important;
   right: 0 !important;
   top: calc(100% + 4px) !important;
@@ -80,7 +76,6 @@
   --bodhi-ink-soft: #5E574F;
   --bodhi-ink-faint: #8A8278;
   --bodhi-line: #E6E0D8;
-  /* Oxidized copper — desaturated, editorial; not SaaS blue */
   --bodhi-accent: #9A6B4F;
   --bodhi-accent-soft: #F0E7DF;
   --bodhi-signal: #6A8F7B;
@@ -210,7 +205,6 @@
   overflow: visible !important;
 }
 
-/* Drag: see captions through widget (~62%) + light scrim so type stays readable */
 .bodhi-widget.bodhi-widget-dragging {
   opacity: 0.62 !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18) !important;
@@ -234,7 +228,6 @@
   box-sizing: border-box !important;
 }
 
-/* Toolbar: one baseline row — history + X share edge padding */
 .bodhi-toolbar {
   display: flex !important;
   align-items: center !important;
@@ -381,11 +374,7 @@
 .bodhi-word-row {
   display: flex !important;
   align-items: flex-start !important;
-  gap: var(--bodhi-space-2) !important;
   margin-bottom: var(--bodhi-space-1) !important;
-  overflow: visible !important;
-  position: relative !important;
-  z-index: 2 !important;
 }
 
 .bodhi-word {
@@ -396,61 +385,50 @@
   letter-spacing: -0.02em !important;
   color: var(--bodhi-ink) !important;
   margin: 0 !important;
-  flex: 1 !important;
   min-width: 0 !important;
 }
 
-.bodhi-method {
-  flex-shrink: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  width: auto !important;
-  max-width: 96px !important;
-  height: auto !important;
-  min-height: 22px !important;
-  margin-top: 2px !important;
-  padding: 2px 7px !important;
+.bodhi-meta {
+  display: flex !important;
+  align-items: baseline !important;
+  flex-wrap: wrap !important;
+  gap: 0.35em !important;
+  margin: 0 0 var(--bodhi-space-2) 0 !important;
+  font-family: var(--bodhi-font-body) !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+
+.bodhi-pos {
+  font-style: italic !important;
+  color: var(--bodhi-ink-soft) !important;
+  -webkit-text-fill-color: var(--bodhi-ink-soft) !important;
+  margin: 0 !important;
+}
+
+.bodhi-meta-sep {
+  color: var(--bodhi-ink-faint) !important;
+  -webkit-text-fill-color: var(--bodhi-ink-faint) !important;
+  font-style: normal !important;
+}
+
+.bodhi-source {
+  font-style: normal !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em !important;
   color: var(--bodhi-caption) !important;
-  background: var(--bodhi-hover) !important;
-  border: 1px solid var(--bodhi-line) !important;
-  border-radius: 999px !important;
-  box-sizing: border-box !important;
+  -webkit-text-fill-color: var(--bodhi-caption) !important;
 }
 
-.bodhi-method-label {
-  font-family: var(--bodhi-font) !important;
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  line-height: 1.2 !important;
-  letter-spacing: 0.02em !important;
-  color: inherit !important;
-  -webkit-text-fill-color: currentColor !important;
-  white-space: nowrap !important;
-}
-
-.bodhi-method:has(.bodhi-method-search),
-.bodhi-method-search {
+.bodhi-source--search {
   color: var(--bodhi-search) !important;
-}
-
-.bodhi-method:has(.bodhi-method-caption),
-.bodhi-method-caption {
-  color: var(--bodhi-caption) !important;
-}
-
-.bodhi-method svg,
-.bodhi-history-entry .bodhi-method-icon {
-  color: inherit !important;
+  -webkit-text-fill-color: var(--bodhi-search) !important;
 }
 
 .bodhi-history-entry .bodhi-method-tip {
   display: inline-flex !important;
   flex-shrink: 0 !important;
   align-items: center !important;
-  justify-content: center !important;
-  border-radius: var(--bodhi-radius) !important;
 }
 
 .bodhi-history-entry .bodhi-method-caption { color: var(--bodhi-caption) !important; }
@@ -462,14 +440,6 @@
   line-height: 1.5 !important;
   color: var(--bodhi-ink) !important;
   margin: 0 !important;
-}
-
-.bodhi-pos {
-  font-family: var(--bodhi-font-body) !important;
-  font-size: 12px !important;
-  font-style: italic !important;
-  color: var(--bodhi-ink-soft) !important;
-  margin: 0 0 var(--bodhi-space-2) 0 !important;
 }
 
 .bodhi-search-link {
@@ -742,7 +712,6 @@
   text-transform: uppercase !important;
 }
 
-/* Cap at 5 rows; thin overlay thumb (no classic gutter strip) */
 .bodhi-history-list {
   --bodhi-history-row-h: 40px;
   --bodhi-history-rows: 5;
@@ -760,7 +729,6 @@
   display: flex !important;
   flex-direction: column !important;
   gap: var(--bodhi-space-1) !important;
-  /* Equal inset on all sides — first/last rows match left/right */
   padding: 8px !important;
 }
 
@@ -804,12 +772,10 @@
     border-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
 }
 
-/* Quiet hover when not the listbox cursor */
 .bodhi-history-row:hover:not(.is-stand) {
   background: var(--bodhi-hover) !important;
 }
 
-/* Industry listbox stand — one clear cursor for pointer + ↑↓ */
 .bodhi-history-row.is-stand {
   background: var(--bodhi-accent-soft) !important;
   border-color: color-mix(in srgb, var(--bodhi-accent) 34%, transparent) !important;
@@ -873,7 +839,6 @@
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  /* Room for ascenders/descenders inside the ellipsis clip box */
   padding-block: 1px !important;
 }
 
@@ -914,11 +879,7 @@
   opacity: 1 !important;
 }
 
-/*
-  Inline definition — max-height accordion (not grid 0fr/1fr).
-  Inside a flex column, 1fr tracks resolve against an indefinite
-  height and stay at 0px, so expands never revealed the def.
-*/
+/* grid 0fr/1fr resolves to 0px in this flex column — use max-height */
 .bodhi-history-def {
   display: block !important;
   max-height: 0 !important;

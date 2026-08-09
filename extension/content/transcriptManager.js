@@ -8,7 +8,6 @@ const state = {
   readyAt: null,
 }
 
-// Rolling snapshot of the past-3s caption window (updated on video timeupdate)
 let snapshot = { text: null, phrases: [], t: 0, updatedAt: 0 }
 
 let urlPollIntervalId = null
@@ -18,8 +17,7 @@ let snapshotThrottleId = null
 let readyResolve = null
 let readyPromise = null
 
-// Incremented on every video change — any async op that captured
-// an older initId knows its results are stale and must be discarded
+// Bumped on video change so in-flight fetches can detect staleness
 let currentInitId = 0
 
 function createReadyPromise() {
@@ -127,7 +125,6 @@ function parseTimedtextJson(json) {
   return entries
 }
 
-// Transcript is sorted by startTime; find first entry with endTime >= windowStart
 function binarySearchTranscript(transcript, windowStart) {
   let lo = 0
   let hi = transcript.length - 1
@@ -270,7 +267,6 @@ async function initializeForVideo(videoId) {
   try {
     const transcript = await fetchTimedtext(videoId)
 
-    // Video changed while fetching — discard results entirely
     if (initId !== currentInitId) return
 
     if (transcript && transcript.length > 0) {
@@ -309,7 +305,6 @@ function getTextWindow(currentTime) {
 
   const time = typeof currentTime === 'number' ? currentTime : 0
 
-  // Past 3 seconds only — never use future captions
   const windowStart = time - 3
   const windowEnd = time
 
@@ -393,7 +388,6 @@ function getStatus() {
 }
 
 function getSnapshot() {
-  // Prefer live snapshot; refresh once if stale (>500ms) so ⌘B stays current
   if (Date.now() - (snapshot.updatedAt || 0) > 500) {
     refreshSnapshot()
   }

@@ -1,5 +1,3 @@
-// Message protocol: BODHI_DEFINE / BODHI_RANK (requestId + payload) → *_RESULT.
-
 import { fetchDefinition } from './definitionFetcher.js'
 import { predict } from './wordPredictor.js'
 

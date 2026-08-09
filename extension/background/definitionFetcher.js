@@ -20,7 +20,6 @@ function readMemory(key) {
     memoryCache.delete(key)
     return null
   }
-  // LRU touch
   memoryCache.delete(key)
   memoryCache.set(key, entry)
   return entry
@@ -94,8 +93,7 @@ function cleanDefinition(text) {
 
   cleaned = cleaned.replace(/<[^>]+>/g, ' ')
 
-  // MW curly-brace markup: keep inner text, drop tag markers
-  // {it}word{/it} → word; {b}word{/b} → word; {sx|word||} → word
+  // Merriam-Webster brace tags → plain text
   cleaned = cleaned.replace(/\{\/[^}]+\}/g, '')
   cleaned = cleaned.replace(/\{[a-z_]+\|([^}]+)\}/g, '$1')
   cleaned = cleaned.replace(/\{[a-z_]+\}/g, ' ')
@@ -158,11 +156,10 @@ async function fetchFromMerriamWebster(word, contextWords) {
 
     const data = await response.json()
     if (!Array.isArray(data) || data.length === 0) return null
-    if (typeof data[0] === 'string') return null  // suggestions, not definitions
+    if (typeof data[0] === 'string') return null
 
     const candidates = []
 
-    // Recursively extract all text from a dt array
     function extractFromDt(dt, pos) {
       if (!Array.isArray(dt)) return
       for (const dtItem of dt) {
@@ -170,7 +167,6 @@ async function fetchFromMerriamWebster(word, contextWords) {
         if (dtItem[0] === 'text' && dtItem[1]) {
           candidates.push({ text: dtItem[1], pos })
         }
-        // uns = usage notes — contain additional definition context
         if (dtItem[0] === 'uns' && Array.isArray(dtItem[1])) {
           for (const unGroup of dtItem[1]) {
             for (const unItem of unGroup) {
@@ -183,13 +179,9 @@ async function fetchFromMerriamWebster(word, contextWords) {
       }
     }
 
-    // Extract from a single sense object
     function extractFromSense(senseData, pos) {
       if (!senseData || typeof senseData !== 'object') return
-
-          if (senseData.dt) extractFromDt(senseData.dt, pos)
-
-      // sdsense — divided sense, has its own dt
+      if (senseData.dt) extractFromDt(senseData.dt, pos)
       if (senseData.sdsense?.dt) extractFromDt(senseData.sdsense.dt, pos)
     }
 
@@ -210,12 +202,10 @@ async function fetchFromMerriamWebster(word, contextWords) {
               extractFromSense(senseData, pos)
             }
 
-            // bs = binding substitute — wraps a sense object
             if (senseType === 'bs' && senseData?.sense) {
               extractFromSense(senseData.sense, pos)
             }
 
-            // pseq — parallel sense sequences, array of sense items
             if (senseType === 'pseq' && Array.isArray(senseData)) {
               for (const pseudoSense of senseData) {
                 if (Array.isArray(pseudoSense) && pseudoSense[0] === 'sense') {

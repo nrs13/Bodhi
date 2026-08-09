@@ -2,10 +2,12 @@ import nspell from 'nspell'
 import transcriptManager from './transcriptManager.js'
 import { predict } from './wordPredictor.js'
 import { fetchDefinition, fetchDefinitionForSearch } from './definitionFetcher.js'
+import { cleanDefinition, escAttr, escHtml } from '../shared/text.js'
+import { HISTORY_MAX_ENTRIES, pruneHistoryEntries } from '../shared/history.js'
 
 function isChromeContextValid() {
   try {
-    // chrome.runtime.id throws after extension reload invalidates the content script
+    // Invalid after extension reload until the page is refreshed
     return !!chrome.runtime?.id
   } catch {
     return false
@@ -130,27 +132,7 @@ function getVideoId() {
   } catch { return null }
 }
 
-/** Per-video history lives in chrome.storage.local (survives refresh/restart). */
-const HISTORY_MAX_ENTRIES_PER_VIDEO = 200
-const HISTORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
-
-/**
- * `bodhi_session_keys` is a durable index of `bodhi_history_*` keys in
- * chrome.storage.local — not browser-session scoped. Name is historical.
- */
-function pruneHistoryEntries(entries) {
-  const cutoff = Date.now() - HISTORY_MAX_AGE_MS
-  return (Array.isArray(entries) ? entries : [])
-    .filter((e) => {
-      if (!e || !e.word) return false
-      const ts = e.timestamp || e.ts
-      // Legacy rows may lack ts — keep them (do not treat missing as expired)
-      if (!ts) return true
-      return ts >= cutoff
-    })
-    .sort((a, b) => (b.timestamp || b.ts || 0) - (a.timestamp || a.ts || 0))
-    .slice(0, HISTORY_MAX_ENTRIES_PER_VIDEO)
-}
+// bodhi_session_keys = durable index of bodhi_history_* (name is historical)
 
 async function pruneAllHistoryStorage() {
   if (!isChromeContextValid()) return
@@ -158,14 +140,13 @@ async function pruneAllHistoryStorage() {
     chrome.storage.local.get(null, (all) => {
       if (chrome.runtime.lastError || !all) { resolve(); return }
       const keys = Object.keys(all).filter((k) => k.startsWith('bodhi_history_'))
-      // bodhi_session_keys index (durable; survives refresh)
       let sessionKeys = Array.isArray(all.bodhi_session_keys) ? [...all.bodhi_session_keys] : []
       const patch = {}
       let indexChanged = false
 
       const toRemove = []
       keys.forEach((k) => {
-        const pruned = pruneHistoryEntries(all[k])
+        const pruned = pruneHistoryEntries(all[k], HISTORY_MAX_ENTRIES)
         if (pruned.length === 0) {
           toRemove.push(k)
           sessionKeys = sessionKeys.filter((sk) => sk !== k)
@@ -205,9 +186,8 @@ async function saveWordToHistory(entry) {
     chrome.storage.local.get([storageKey, 'bodhi_history_index', 'bodhi_session_keys'], (result) => {
       if (chrome.runtime.lastError) { resolve(); return }
 
-      const existing = pruneHistoryEntries(result[storageKey] || [])
+      const existing = pruneHistoryEntries(result[storageKey] || [], HISTORY_MAX_ENTRIES)
       const globalIndex = (result.bodhi_history_index || 0) + 1
-      // Durable video-key index (not cleared on refresh)
       const sessionKeys = result.bodhi_session_keys || []
 
       const newEntry = {
@@ -221,7 +201,6 @@ async function saveWordToHistory(entry) {
       }
 
       if (existing.length > 0 && existing[0].word === newEntry.word && existing[0].source === newEntry.source) {
-        // Still refresh timestamp/definition on repeat lookup
         const merged = [{ ...existing[0], ...newEntry, id: existing[0].id }, ...existing.slice(1)]
         chrome.storage.local.set({
           [storageKey]: merged,
@@ -230,7 +209,7 @@ async function saveWordToHistory(entry) {
         return
       }
 
-      const updated = pruneHistoryEntries([newEntry, ...existing])
+      const updated = pruneHistoryEntries([newEntry, ...existing], HISTORY_MAX_ENTRIES)
 
       if (!sessionKeys.includes(storageKey)) sessionKeys.push(storageKey)
       chrome.storage.local.set({
@@ -295,27 +274,6 @@ let isProcessing = false
 let autoDismissTimer = null
 let historyViewActive = false
 let lastTextWindow = null
-
-function cleanDefinition(str = '') {
-  return String(str)
-    // MW sense junk: "happy joy||." / trailing pipes before punctuation
-    .replace(/\|+/g, ' ')
-    .replace(/\s+([.!?,;:])/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function escHtml(str = '') {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function escAttr(str = '') {
-  return escHtml(str).replace(/'/g, '&#39;')
-}
 
 function isHistoryViewOpen(widget = widgetInstance) {
   if (historyViewActive) return true
@@ -424,6 +382,10 @@ const UNAVAILABLE_COPY = {
 
 function isMac() { return navigator.platform.toUpperCase().includes('MAC') }
 
+function hotkeyLabel() {
+  return isMac() ? '⌘B' : 'Ctrl+B'
+}
+
 function matchesHotkey(event) {
   if (event.key.toLowerCase() !== 'b') return false
   return isMac()
@@ -464,8 +426,7 @@ async function loadVideoHistory() {
     const storageKey = `bodhi_history_${videoId}`
     chrome.storage.local.get([storageKey], (result) => {
       if (chrome.runtime.lastError) { resolve([]); return }
-      const pruned = pruneHistoryEntries(result[storageKey] || [])
-      // Persist prune so refresh always reloads the same durable list
+      const pruned = pruneHistoryEntries(result[storageKey] || [], HISTORY_MAX_ENTRIES)
       if (pruned.length !== (result[storageKey] || []).length) {
         chrome.storage.local.set({ [storageKey]: pruned }, () => resolve(pruned))
         return
@@ -475,7 +436,6 @@ async function loadVideoHistory() {
   })
 }
 
-/** Solid strokes in dense lists — dashed motif reads as garbled “dots” next to words. */
 function hotkeyIconSvg({ solid = false } = {}) {
   const dashBox = solid ? '' : ' stroke-dasharray="1.5 2.4"'
   const dashLine = solid ? '' : ' stroke-dasharray="1 1.8"'
@@ -514,15 +474,21 @@ function historyClockSvg() {
   </svg>`
 }
 
-function methodBadgeHtml(source) {
+function lookupMetaHtml(partOfSpeech, source) {
   const isSearch = source === 'search'
-  const title = isSearch ? 'Found via search' : 'Found via captions (⌘B)'
-  const icon = isSearch ? searchIconSvg() : hotkeyIconSvg()
-  // Compact chip stays inside the card — CSS tips were clipped to “Found via sea”
+  const kind = isSearch ? 'search' : 'caption'
   const label = isSearch ? 'search' : 'captions'
-  return `<span class="bodhi-method" aria-label="${title}" title="${title}">
-    ${icon}<span class="bodhi-method-label">${label}</span>
-  </span>`
+  const title = isSearch ? 'Found via search' : `Found via captions (${hotkeyLabel()})`
+  const pos = String(partOfSpeech || '').trim()
+  const parts = []
+  if (pos) {
+    parts.push(`<span class="bodhi-pos bodhi-selectable">${escHtml(pos)}</span>`)
+  }
+  if (pos) parts.push(`<span class="bodhi-meta-sep" aria-hidden="true">·</span>`)
+  parts.push(
+    `<span class="bodhi-source bodhi-source--${kind}" title="${escAttr(title)}">${label}</span>`,
+  )
+  return `<div class="bodhi-meta">${parts.join('')}</div>`
 }
 
 function toolbarHtml({ showHistory = false, showBack = false, title = '' } = {}) {
@@ -557,7 +523,6 @@ function toolbarHtml({ showHistory = false, showBack = false, title = '' } = {})
 }
 
 function historyViewHtml(history, currentWordId) {
-  // Label matches persistence: per-video history in chrome.storage.local (not tab-session).
   return `
     <div class="bodhi-history-view is-hidden">
       ${toolbarHtml({ showBack: true, title: 'history' })}
@@ -571,7 +536,6 @@ function historyViewHtml(history, currentWordId) {
 
 function formatSearchHint(message) {
   const text = String(message || '')
-  // Keep "search it." un-underlined even if host-page link styles leak in.
   if (text.includes('search it.')) {
     return text.replace(
       'search it.',
@@ -586,7 +550,6 @@ function setHistoryKeyboardFocus(list, index) {
   rows.forEach((row, i) => {
     const entry = row.querySelector('.bodhi-history-entry')
     const on = i === index
-    // Stand lives on the whole row (header + def) — standard listbox cursor
     row.classList.toggle('is-stand', on)
     entry?.classList.toggle('is-kb-focus', on)
     entry?.setAttribute('aria-selected', on ? 'true' : 'false')
@@ -607,7 +570,6 @@ function toggleHistoryRowExpand(row, list) {
     row.classList.add('is-expanded')
     row.querySelector('.bodhi-history-entry')?.setAttribute('aria-expanded', 'true')
     row.querySelector('.bodhi-history-chevron')?.classList.add('open')
-    // Keep expanded def in view inside the 5-row scrollport
     requestAnimationFrame(() => {
       row.scrollIntoView({ block: 'nearest' })
     })
@@ -624,7 +586,6 @@ function attachHistoryHandlers(widget) {
     })
   })
 
-  // Scope to history view — recent refactors left back unwired / easy to miss
   const backBtn = widget.querySelector('.bodhi-history-view .bodhi-back')
   if (backBtn) {
     backBtn.addEventListener('click', (e) => {
@@ -636,7 +597,6 @@ function attachHistoryHandlers(widget) {
       const historyView = widget.querySelector('.bodhi-history-view')
       const mainView = widget.querySelector('.bodhi-main-view')
       if (!historyView || !mainView) return
-      // Collapse any open inline defs before leaving
       historyView.querySelectorAll('.bodhi-history-row.is-expanded').forEach((r) => {
         r.classList.remove('is-expanded')
         r.querySelector('.bodhi-history-entry')?.setAttribute('aria-expanded', 'false')
@@ -655,7 +615,6 @@ function attachHistoryHandlers(widget) {
       pauseAutoDismiss()
       historyViewActive = true
       spinClockHands(historyBtn)
-      // Always re-read durable storage so refresh/reopen never shows a stale empty shell
       const history = await loadVideoHistory()
       const historyList = widget.querySelector('.bodhi-history-list')
       const currentWord = widget.querySelector('.bodhi-word')?.textContent?.trim() || ''
@@ -684,7 +643,6 @@ function bindHistoryListInteractions(widget, historyList) {
   const backBtn = widget.querySelector('.bodhi-history-view .bodhi-back')
   historyList.setAttribute('tabindex', '0')
 
-  // Delegate once — survives innerHTML refresh from storage
   if (historyList.dataset.bound === '1') return
   historyList.dataset.bound = '1'
 
@@ -710,8 +668,6 @@ function bindHistoryListInteractions(widget, historyList) {
     if (idx >= 0) standOn(idx)
     toggleHistoryRowExpand(row, historyList)
   }, true)
-
-  // Hover is CSS-only. Stand moves on click / ↑↓ only (standard listbox).
 
   historyList.addEventListener('keydown', (e) => {
     const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
@@ -983,14 +939,13 @@ function buildHistoryView(history, currentWordId) {
   return entries.map((entry, i) => {
     const isCurrent = entry.id === currentWordId
     const source = entry.source === 'search' ? 'search' : 'hotkey'
-    // Solid icons in the list — dashed strokes were reading as “garbled” fragments
     const icon = source === 'hotkey' ? hotkeyIconSvg({ solid: true }) : searchIconSvg({ solid: true })
     const definition = cleanDefinition(entry.definition || '')
     const defHtml = definition
       ? escHtml(definition)
       : '<span class="bodhi-history-def-missing">No definition saved for this word.</span>'
 
-    const tip = source === 'hotkey' ? 'Looked up via ⌘B' : 'Looked up via search'
+    const tip = source === 'hotkey' ? `Looked up via ${hotkeyLabel()}` : 'Looked up via search'
     const word = String(entry.word || '').trim()
     if (!word) return ''
 
@@ -1106,9 +1061,8 @@ async function showSearchResult(word, partOfSpeech, definition) {
       <div class="bodhi-panel">
         <div class="bodhi-word-row">
           <div class="bodhi-word"><span class="bodhi-selectable">${word}</span></div>
-          ${methodBadgeHtml('search')}
         </div>
-        ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
+        ${lookupMetaHtml(partOfSpeech, 'search')}
         <div class="bodhi-definition bodhi-selectable">${cleanDef}</div>
         <div class="bodhi-footer-link">
           <button class="bodhi-search-link" data-action="search-another">search another →</button>
@@ -1222,9 +1176,8 @@ function createWidget(word, partOfSpeech, definition, state, history, currentWor
         <div class="bodhi-word">
           <span class="bodhi-selectable">${word}</span>
         </div>
-        ${methodBadgeHtml(source)}
       </div>
-      ${partOfSpeech ? `<div class="bodhi-pos bodhi-selectable">${partOfSpeech}</div>` : ''}
+      ${lookupMetaHtml(partOfSpeech, source)}
       <div class="bodhi-definition bodhi-selectable">
         ${cleanDef}
       </div>
@@ -1519,7 +1472,6 @@ function init() {
   loadSettings()
   initThemeListeners()
   loadSpellChecker()
-  // Rolling retention: drop entries older than 30d / over the per-video cap
   pruneAllHistoryStorage()
   document.addEventListener('keydown', handleKeydown, true)
   transcriptManager.init()

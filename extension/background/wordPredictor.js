@@ -18,8 +18,7 @@ const STOP_WORDS = new Set([
   'somebody','nobody',
 ])
 
-// Raised to 5000 — filters out common conjugated forms like
-// "playing", "described", "running" unless window has no harder words
+// Skip common conjugations unless nothing harder is in the window
 const MIN_RANK_FOR_SUGGESTION = 5000
 const UNKNOWN_RANK = 99999
 const MAX_RANK = 100000
