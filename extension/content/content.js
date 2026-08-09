@@ -513,7 +513,11 @@ function methodBadgeHtml(source) {
   const isSearch = source === 'search'
   const title = isSearch ? 'Found via search' : 'Found via captions (⌘B)'
   const icon = isSearch ? searchIconSvg() : hotkeyIconSvg()
-  return `<span class="bodhi-method" data-bodhi-tip="${title}" aria-label="${title}">${icon}</span>`
+  // Compact chip stays inside the card — CSS tips were clipped to “Found via sea”
+  const label = isSearch ? 'search' : 'captions'
+  return `<span class="bodhi-method" aria-label="${title}" title="${title}">
+    ${icon}<span class="bodhi-method-label">${label}</span>
+  </span>`
 }
 
 function toolbarHtml({ showHistory = false, showBack = false, title = '' } = {}) {

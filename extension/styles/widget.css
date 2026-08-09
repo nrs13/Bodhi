@@ -12,7 +12,12 @@
   border: none !important;
   cursor: pointer !important;
   outline: none !important;
-  font: inherit !important;
+  /* Never use the `font` shorthand here — it resets line-height and
+     YouTube’s compressed button metrics win, vertically clipping glyphs. */
+  font-family: var(--bodhi-font) !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: normal !important;
 }
 
 .bodhi-widget svg {
@@ -27,11 +32,12 @@
 .bodhi-widget [data-bodhi-tip]::after {
   content: attr(data-bodhi-tip) !important;
   position: absolute !important;
-  /* Above trigger — never paints over sibling word/pos text */
-  left: 50% !important;
-  bottom: calc(100% + 6px) !important;
-  top: auto !important;
-  transform: translateX(-50%) translateY(3px) !important;
+  /* Below + right-aligned so tip stays inside the 268px card */
+  left: auto !important;
+  right: 0 !important;
+  top: calc(100% + 4px) !important;
+  bottom: auto !important;
+  transform: translateY(-2px) !important;
   padding: 5px 8px !important;
   border-radius: var(--bodhi-radius) !important;
   background: var(--bodhi-ink) !important;
@@ -58,7 +64,7 @@
 .bodhi-widget [data-bodhi-tip]:focus-visible::after {
   opacity: 1 !important;
   visibility: visible !important;
-  transform: translateX(-50%) translateY(0) !important;
+  transform: translateY(0) !important;
 }
 
 .bodhi-widget {
@@ -377,6 +383,9 @@
   align-items: flex-start !important;
   gap: var(--bodhi-space-2) !important;
   margin-bottom: var(--bodhi-space-1) !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 .bodhi-word {
@@ -396,11 +405,29 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 22px !important;
-  height: 22px !important;
+  gap: 4px !important;
+  width: auto !important;
+  max-width: 96px !important;
+  height: auto !important;
+  min-height: 22px !important;
   margin-top: 2px !important;
+  padding: 2px 7px !important;
   color: var(--bodhi-caption) !important;
-  border-radius: var(--bodhi-radius) !important;
+  background: var(--bodhi-hover) !important;
+  border: 1px solid var(--bodhi-line) !important;
+  border-radius: 999px !important;
+  box-sizing: border-box !important;
+}
+
+.bodhi-method-label {
+  font-family: var(--bodhi-font) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.02em !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  white-space: nowrap !important;
 }
 
 .bodhi-method:has(.bodhi-method-search),
@@ -764,33 +791,40 @@
   display: flex !important;
   flex-direction: column !important;
   border-radius: var(--bodhi-radius) !important;
+  /* Clip only the expanding def panel corners — not mid-glyph on the row */
+  overflow: visible !important;
+}
+
+.bodhi-history-row.is-expanded {
   overflow: hidden !important;
 }
 
-.bodhi-history-entry {
+.bodhi-widget button.bodhi-history-entry {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: var(--bodhi-space-2) !important;
   width: 100% !important;
+  height: auto !important;
   min-height: 36px !important;
-  padding: var(--bodhi-space-2) !important;
+  max-height: none !important;
+  padding: 8px var(--bodhi-space-2) !important;
   border-radius: var(--bodhi-radius) !important;
   cursor: pointer !important;
   transition: background var(--bodhi-motion-fast) var(--bodhi-ease), border-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
   border: none !important;
   border-left: 2px solid transparent !important;
   background: transparent !important;
-  /* Readable at rest — do not depend on hover for ink contrast */
   color: var(--bodhi-ink) !important;
   -webkit-text-fill-color: var(--bodhi-ink) !important;
   font-family: var(--bodhi-font) !important;
   font-size: 13px !important;
   font-weight: 400 !important;
-  line-height: 1.3 !important;
+  line-height: 1.35 !important;
   text-align: left !important;
   opacity: 1 !important;
   visibility: visible !important;
+  overflow: visible !important;
 }
 
 .bodhi-history-entry-main {
@@ -839,6 +873,7 @@
   font-family: var(--bodhi-font) !important;
   font-weight: 700 !important;
   font-size: 13px !important;
+  line-height: 1.35 !important;
   letter-spacing: -0.01em !important;
   color: var(--bodhi-ink) !important;
   -webkit-text-fill-color: var(--bodhi-ink) !important;
@@ -847,6 +882,8 @@
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+  /* Room for ascenders/descenders inside the ellipsis clip box */
+  padding-block: 1px !important;
 }
 
 .bodhi-history-entry:hover .bodhi-history-word,
@@ -860,12 +897,14 @@
 .bodhi-history-pos {
   font-family: var(--bodhi-font-body) !important;
   font-size: 11px !important;
+  line-height: 1.35 !important;
   color: var(--bodhi-ink-soft) !important;
   -webkit-text-fill-color: var(--bodhi-ink-soft) !important;
   font-style: italic !important;
   flex-shrink: 0 !important;
   opacity: 1 !important;
   visibility: visible !important;
+  padding-block: 1px !important;
 }
 
 .bodhi-history-chevron {
