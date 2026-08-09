@@ -144,30 +144,44 @@ function renderLookups() {
       </svg>` : ''
 
     const tip = source === 'search' ? 'Found via search' : 'Found via captions'
+    const rowClass = [
+      'lookup-row',
+      isExpanded ? 'is-expanded' : '',
+      isKb ? 'is-stand' : '',
+    ].filter(Boolean).join(' ')
 
     html += `
-      <button type="button" class="lookup-item${isExpanded ? ' active' : ''}${isKb ? ' kb-active' : ''}"
-        data-idx="${i}" role="option" aria-selected="${isKb || isExpanded}">
-        <div class="lookup-item-inner">
-          <div class="lookup-item-left">
-            <span class="method-tip" data-bodhi-tip="${tip}" aria-label="${tip}">${icon}</span>
-            <span class="lookup-word">${escHtml(entry.word)}</span>
+      <div class="${rowClass}" data-idx="${i}" role="option" aria-selected="${isKb}">
+        <button type="button" class="lookup-item" data-idx="${i}">
+          <div class="lookup-item-inner">
+            <div class="lookup-item-left">
+              <span class="method-tip" data-bodhi-tip="${tip}" aria-label="${tip}">${icon}</span>
+              <span class="lookup-word">${escHtml(entry.word)}</span>
+            </div>
+            <div class="lookup-right">
+              ${entry.pos ? `<span class="lookup-pos">${escHtml(entry.pos)}</span>` : ''}
+              ${chevron}
+            </div>
           </div>
-          <div class="lookup-right">
-            ${entry.pos ? `<span class="lookup-pos">${escHtml(entry.pos)}</span>` : ''}
-            ${chevron}
-          </div>
-        </div>
-      </button>
-      ${hasdef ? `
-        <div class="lookup-def${isExpanded ? ' open' : ''}" data-def-for="${i}">
-          <p>${escHtml(definition)}</p>
-        </div>` : ''}
-      ${i < allLookups.length - 1 ? `<div class="lookup-divider" role="separator"></div>` : ''}
+        </button>
+        ${hasdef ? `
+          <div class="lookup-def${isExpanded ? ' open' : ''}" data-def-for="${i}">
+            <p>${escHtml(definition)}</p>
+          </div>` : ''}
+      </div>
     `
   })
 
   lookupList.innerHTML = html
+
+  const syncStandClasses = () => {
+    lookupList.querySelectorAll('.lookup-row').forEach((row) => {
+      const i = parseInt(row.dataset.idx, 10)
+      const on = i === kbActiveIdx
+      row.classList.toggle('is-stand', on)
+      row.setAttribute('aria-selected', on ? 'true' : 'false')
+    })
+  }
 
   lookupList.querySelectorAll('.lookup-item').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -177,18 +191,16 @@ function renderLookups() {
       renderLookups()
       scrollKbIntoView()
     })
-    // Pointer stand matches ↑↓ — filled row, not the old left bar
-    btn.addEventListener('mouseenter', () => {
-      const idx = parseInt(btn.dataset.idx, 10)
-      if (Number.isNaN(idx) || idx === kbActiveIdx) return
-      kbActiveIdx = idx
-      lookupList.querySelectorAll('.lookup-item').forEach((el) => {
-        const i = parseInt(el.dataset.idx, 10)
-        const on = i === kbActiveIdx
-        el.classList.toggle('kb-active', on)
-        el.setAttribute('aria-selected', on || el.classList.contains('active') ? 'true' : 'false')
-      })
-    })
+  })
+
+  // Pointer moves the listbox cursor (same as ↑↓) without collapsing expand state
+  lookupList.addEventListener('pointerover', (e) => {
+    const row = e.target.closest?.('.lookup-row')
+    if (!row || !lookupList.contains(row)) return
+    const idx = parseInt(row.dataset.idx, 10)
+    if (Number.isNaN(idx) || idx === kbActiveIdx) return
+    kbActiveIdx = idx
+    syncStandClasses()
   })
 
   if (listScroll && kbActiveIdx >= 0) scrollKbIntoView()
@@ -198,7 +210,7 @@ function renderLookups() {
 function scrollKbIntoView() {
   const listScroll = document.getElementById('lookup-list-scroll')
     || document.getElementById('lookup-list-wrap')
-  const active = listScroll?.querySelector('.lookup-item.kb-active')
+  const active = listScroll?.querySelector('.lookup-row.is-stand')
   if (active) active.scrollIntoView({ block: 'nearest' })
 }
 

@@ -586,8 +586,11 @@ function setHistoryKeyboardFocus(list, index) {
   rows.forEach((row, i) => {
     const entry = row.querySelector('.bodhi-history-entry')
     const on = i === index
+    // Stand lives on the whole row (header + def) — standard listbox cursor
+    row.classList.toggle('is-stand', on)
     entry?.classList.toggle('is-kb-focus', on)
-    if (on) entry?.scrollIntoView({ block: 'nearest' })
+    entry?.setAttribute('aria-selected', on ? 'true' : 'false')
+    if (on) row.scrollIntoView({ block: 'nearest' })
   })
   return rows
 }
