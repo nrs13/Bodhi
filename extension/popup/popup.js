@@ -1,24 +1,11 @@
+import { cleanDefinition, escHtml } from '../shared/text.js'
+import { HISTORY_MAX_ENTRIES, pruneHistoryEntries } from '../shared/history.js'
+
 let allLookups  = []
 let expandedIdx = null
 let kbActiveIdx = -1
 let settings    = { enabled: true, autoDismiss: true, spellCheck: true, autoEnableCaptions: true }
 
-/** Match content script retention: 30 days / 200 per video. */
-const HISTORY_MAX_ENTRIES = 200
-const HISTORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
-
-function pruneLookupEntries(entries) {
-  const cutoff = Date.now() - HISTORY_MAX_AGE_MS
-  return (Array.isArray(entries) ? entries : [])
-    .filter((e) => {
-      if (!e || !e.word) return false
-      const ts = e.timestamp || e.ts
-      if (!ts) return true
-      return ts >= cutoff
-    })
-    .sort((a, b) => (b.timestamp || b.ts || 0) - (a.timestamp || a.ts || 0))
-    .slice(0, HISTORY_MAX_ENTRIES)
-}
 /** @type {'system' | 'light' | 'dark'} */
 let themePref = 'system'
 let systemDarkMq = null
@@ -51,10 +38,14 @@ function syncThemeSeg() {
   seg.querySelectorAll('button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.theme === themePref)
   })
+  const sub = document.getElementById('theme-sub')
+  if (!sub) return
+  if (themePref === 'light') sub.textContent = 'Always light'
+  else if (themePref === 'dark') sub.textContent = 'Always dark'
+  else sub.textContent = 'Follows your system'
 }
 
 function methodIconSvg(source) {
-  // Solid strokes in the recent list — dashed motif was reading as garbled fragments
   if (source === 'search') {
     return `<svg class="method-icon search" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <circle cx="6" cy="6" r="4.2" stroke="currentColor" stroke-width="1.1"
@@ -81,21 +72,6 @@ function emptyStateIconSvg() {
   </svg>`
 }
 
-function escHtml(str = '') {
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-function cleanDefinition(str = '') {
-  return String(str)
-    .replace(/\|+/g, ' ')
-    .replace(/\s+([.!?,;:])/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/** Nudge Chrome to recalculate popup window size after content toggles. */
 function nudgePopupHeight() {
   void document.body.offsetHeight
 }
@@ -184,8 +160,6 @@ function renderLookups() {
     })
   })
 
-  // Hover is CSS-only. Stand moves on click / ↑↓ only (standard listbox).
-
   if (listScroll && kbActiveIdx >= 0) scrollKbIntoView()
   nudgePopupHeight()
 }
@@ -222,16 +196,20 @@ function broadcastSetting(key, value) {
 }
 
 function applyEnabledVisuals(value) {
-  const headerCircle = document.getElementById('header-icon-circle')
-  const headerLine   = document.getElementById('header-icon-line')
+  const mark = document.getElementById('header-mark')
   const footerTagline = document.getElementById('footer-tagline')
 
-  if (headerCircle) {
-    headerCircle.style.animation = value ? 'bodhi-dash-orbit 3.5s linear infinite' : 'none'
-    headerCircle.style.opacity   = value ? '1' : '0.45'
+  if (mark) {
+    mark.classList.toggle('is-live', value)
+    mark.classList.toggle('is-idle', !value)
+    if (value) {
+      mark.unpauseAnimations()
+    } else {
+      mark.setCurrentTime(0)
+      mark.pauseAnimations()
+    }
   }
-  if (headerLine)     headerLine.style.opacity    = value ? '1' : '0.45'
-  if (footerTagline)  footerTagline.style.opacity  = value ? '1' : '0.5'
+  if (footerTagline) footerTagline.style.opacity = value ? '1' : '0.5'
 }
 
 function wireToggle(btnId, settingKey) {
@@ -285,12 +263,10 @@ function loadLookups() {
 
     if (videoId) {
       chrome.storage.local.get([`bodhi_history_${videoId}`], (result) => {
-        // Durable per-video history (chrome.storage.local) — survives refresh
-        allLookups = pruneLookupEntries(result[`bodhi_history_${videoId}`] || [])
+        allLookups = pruneHistoryEntries(result[`bodhi_history_${videoId}`] || [], HISTORY_MAX_ENTRIES)
         renderLookups()
       })
     } else {
-      // bodhi_session_keys = durable index of video history keys (not tab-session)
       chrome.storage.local.get(['bodhi_session_keys'], (res) => {
         const sessionKeys = res.bodhi_session_keys || []
         if (sessionKeys.length === 0) { allLookups = []; renderLookups(); return }
@@ -299,7 +275,7 @@ function loadLookups() {
           sessionKeys.forEach(k => {
             if (Array.isArray(data[k])) entries.push(...data[k])
           })
-          allLookups = pruneLookupEntries(entries)
+          allLookups = pruneHistoryEntries(entries, HISTORY_MAX_ENTRIES)
           renderLookups()
         })
       })
@@ -310,10 +286,13 @@ function loadLookups() {
 function setOsHotkeys() {
   const isMac = navigator.platform.toUpperCase().includes('MAC')
   const mod   = isMac ? '⌘' : 'Ctrl'
+  const shift = isMac ? '⇧' : 'Shift'
   const el1 = document.getElementById('key-mod')
   const el2 = document.getElementById('key-mod2')
+  const elShift = document.getElementById('key-shift')
   if (el1) el1.textContent = mod
   if (el2) el2.textContent = mod
+  if (elShift) elShift.textContent = shift
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -343,7 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  /** Chrome keeps :hover on the old row after popup resize — clear it. */
   function clearStuckListHover() {
     const wrap = document.getElementById('lookup-list-wrap')
     if (!wrap) return
@@ -364,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const isOpen = body.classList.toggle('open')
       if (chev) chev.classList.toggle('open', isOpen)
       nudgePopupHeight()
-      // Settings/shortcuts open shifts layout under a still mouse → stuck hover
       clearStuckListHover()
     })
   }

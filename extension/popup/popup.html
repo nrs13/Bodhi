@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bodhi</title>
   <style>
-    @keyframes bodhi-dash-orbit {
-      from { stroke-dashoffset: 0; }
-      to   { stroke-dashoffset: -44; }
-    }
     @keyframes bodhi-fade-in {
       from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -48,7 +44,6 @@
       --bodhi-row-h: 42px;
       --bodhi-list-rows: 5;
 
-      /* Slim scroll — idle quiet, clearer on hover */
       --bodhi-scroll-size: 4px;
       --bodhi-scroll-thumb: rgba(138, 130, 120, 0.28);
       --bodhi-scroll-thumb-hover: rgba(138, 130, 120, 0.55);
@@ -78,7 +73,6 @@
       height: auto;
     }
 
-    /* Shared slim scrollbar (Chrome / WebKit) */
     .bodhi-scroll {
       scrollbar-width: thin;
       scrollbar-color: var(--bodhi-scroll-thumb) transparent;
@@ -146,7 +140,6 @@
       gap: var(--bodhi-space-2);
     }
 
-    /* Styled tip — replaces native title chrome */
     [data-bodhi-tip] {
       position: relative;
     }
@@ -154,7 +147,6 @@
     [data-bodhi-tip]::after {
       content: attr(data-bodhi-tip);
       position: absolute;
-      /* Above icon — must not cover sibling word text */
       left: 50%;
       bottom: calc(100% + 6px);
       top: auto;
@@ -188,27 +180,51 @@
     .header-logo-row {
       display: flex;
       align-items: center;
-      gap: var(--bodhi-space-2);
-      color: var(--bodhi-ink-faint);
+      gap: 12px;
+      color: var(--bodhi-ink);
+    }
+
+    .header-mark {
+      display: block;
+      flex-shrink: 0;
+      width: 40px;
+      height: 28px;
+      overflow: visible;
+      color: var(--bodhi-ink);
+    }
+
+    .header-mark .strand {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .header-mark .bead {
+      fill: var(--bodhi-accent);
+    }
+
+    .header-mark.is-idle {
+      opacity: 0.62;
     }
 
     .header-wordmark {
       font-size: 22px;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
       line-height: 1;
       color: var(--bodhi-ink);
     }
 
     .header-tagline {
       margin: 0;
-      padding-left: 30px;
+      padding-left: 52px;
       font-size: 12px;
       color: var(--bodhi-ink-faint);
       letter-spacing: 0.01em;
     }
 
-    /* Natural stack: shortcuts → recent → settings; footer follows in document flow */
     .body {
       flex: 0 0 auto;
       padding: var(--bodhi-space-3) var(--bodhi-space-4);
@@ -340,11 +356,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /*
-      Scroll containment: bordered shell clips; inner scrollport owns overflow.
-      Thin thumb overlays the right edge — never reserve a classic gutter lane
-      (that was the empty strip beside the chevrons).
-    */
     .lookup-list-wrap {
       box-sizing: border-box;
       position: relative;
@@ -357,7 +368,6 @@
       overflow: hidden;
     }
 
-    /* Briefly disable hit-testing so Chrome drops a stuck :hover after resize */
     .lookup-list-wrap.is-hover-reset,
     .lookup-list-wrap.is-hover-reset .lookup-row {
       pointer-events: none !important;
@@ -375,7 +385,6 @@
       scrollbar-color: var(--bodhi-scroll-thumb) transparent;
     }
 
-    /* Keep layout width; paint a 3px overlay thumb on the edge */
     .lookup-list-scroll::-webkit-scrollbar {
       width: 3px;
       height: 3px;
@@ -396,15 +405,9 @@
       gap: 2px;
       width: 100%;
       box-sizing: border-box;
-      /* Equal inset on all sides — first/last rows match left/right breathing room */
       padding: 8px;
     }
 
-    /*
-      One unit per word: header + def share the same width/card.
-      Hover = CSS only. Stand (listbox cursor) = click or ↑↓ only —
-      parked mouse must not trap the cursor on one row.
-    */
     .lookup-row {
       display: flex;
       flex-direction: column;
@@ -660,32 +663,57 @@
       left: 19px;
     }
 
+    .setting-row--theme {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--bodhi-space-2);
+    }
+
+    .setting-row--theme .setting-copy {
+      flex: none;
+    }
+
     .theme-seg {
-      display: flex;
-      border: 1px solid var(--bodhi-line);
-      border-radius: var(--bodhi-radius);
-      overflow: hidden;
-      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 3px;
+      width: 100%;
+      box-sizing: border-box;
       background: var(--bodhi-canvas);
+      border: 1px solid var(--bodhi-line);
+      border-radius: 9px;
     }
 
     .theme-seg button {
-      border: none;
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 7px;
       background: transparent;
-      color: var(--bodhi-ink-faint);
+      color: var(--bodhi-ink-soft);
       font: inherit;
       font-size: 11px;
       font-weight: 500;
-      padding: 5px 8px;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      padding: 8px 4px;
       cursor: pointer;
       transition:
         background var(--bodhi-motion-fast) var(--bodhi-ease),
-        color var(--bodhi-motion-fast) var(--bodhi-ease);
+        color var(--bodhi-motion-fast) var(--bodhi-ease),
+        border-color var(--bodhi-motion-fast) var(--bodhi-ease);
+    }
+
+    .theme-seg button:hover:not(.active) {
+      color: var(--bodhi-ink);
+      background: color-mix(in srgb, var(--bodhi-surface) 70%, transparent);
     }
 
     .theme-seg button.active {
-      background: var(--bodhi-accent);
-      color: #FFFFFF;
+      background: var(--bodhi-accent-soft);
+      border-color: color-mix(in srgb, var(--bodhi-accent) 28%, var(--bodhi-line));
+      color: var(--bodhi-accent);
+      font-weight: 600;
     }
 
     .footer {
@@ -709,15 +737,39 @@
   <header class="header">
     <div class="header-inner">
       <div class="header-logo-row">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle id="header-icon-circle"
-            cx="11" cy="11" r="7"
-            stroke="currentColor" stroke-width="1.4"
-            stroke-linecap="round" stroke-dasharray="1.8 2.8"
-            fill="none"
-            style="transform-origin:11px 11px; animation: bodhi-dash-orbit 3.5s linear infinite;"/>
-          <line id="header-icon-line" x1="16.5" y1="16.5" x2="21" y2="21"
-            stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <svg class="header-mark is-live" id="header-mark" viewBox="0 0 48 32" aria-hidden="true">
+          <path class="strand" d="M2 17 C8 9 14 23 19 15">
+            <animate attributeName="d" dur="3.2s" repeatCount="indefinite" calcMode="spline"
+              keySplines="0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1"
+              keyTimes="0;0.25;0.5;0.75;1"
+              values="
+                M2 17 C8 9 14 23 19 15;
+                M2 16 C7 6 15 26 19 12;
+                M2 18 C9 24 13 7 19 19;
+                M2 15 C6 11 16 25 19 14;
+                M2 17 C8 9 14 23 19 15"/>
+          </path>
+          <path class="strand" d="M29 17 C34 9 40 23 46 15">
+            <animate attributeName="d" dur="3.2s" repeatCount="indefinite" calcMode="spline"
+              keySplines="0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1"
+              keyTimes="0;0.25;0.5;0.75;1"
+              values="
+                M29 17 C34 9 40 23 46 15;
+                M29 12 C35 26 41 7 46 16;
+                M29 19 C33 6 41 25 46 14;
+                M29 14 C36 22 39 8 46 17;
+                M29 17 C34 9 40 23 46 15"/>
+          </path>
+          <circle class="bead" cx="24" cy="16" r="2.55">
+            <animate attributeName="cy" dur="3.2s" repeatCount="indefinite" calcMode="spline"
+              keySplines="0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1"
+              keyTimes="0;0.25;0.5;0.75;1"
+              values="16;12.5;19;14;16"/>
+            <animate attributeName="cx" dur="3.2s" repeatCount="indefinite" calcMode="spline"
+              keySplines="0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1"
+              keyTimes="0;0.25;0.5;0.75;1"
+              values="24;24.6;23.5;24.3;24"/>
+          </circle>
         </svg>
         <span class="header-wordmark">bodhi</span>
       </div>
@@ -749,7 +801,7 @@
               <span class="shortcut-label">Open search</span>
               <div class="shortcut-keys">
                 <span class="key" id="key-mod2">⌘</span>
-                <span class="key">⇧</span>
+                <span class="key" id="key-shift">⇧</span>
                 <span class="key">B</span>
               </div>
             </div>
@@ -818,15 +870,15 @@
                 <span class="toggle-thumb"></span>
               </button>
             </div>
-            <div class="setting-row">
+            <div class="setting-row setting-row--theme">
               <div class="setting-copy">
                 <div class="setting-label">Appearance</div>
-                <div class="setting-sub">Auto follows your system theme</div>
+                <div class="setting-sub" id="theme-sub">Follows your system</div>
               </div>
               <div class="theme-seg" id="theme-seg" role="group" aria-label="Appearance">
-                <button type="button" data-theme="system" class="active">Auto</button>
-                <button type="button" data-theme="light">Light</button>
-                <button type="button" data-theme="dark">Dark</button>
+                <button type="button" data-theme="system" class="active">auto</button>
+                <button type="button" data-theme="light">light</button>
+                <button type="button" data-theme="dark">dark</button>
               </div>
             </div>
           </div>
