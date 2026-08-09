@@ -42,6 +42,8 @@
       --bodhi-motion-base: 220ms;
       --bodhi-ease: cubic-bezier(0.22, 1, 0.36, 1);
       --bodhi-shadow: 0 10px 32px rgba(18, 20, 26, 0.10);
+      --bodhi-radius: 8px;
+      --bodhi-radius-shell: 12px;
 
       --bodhi-row-h: 42px;
       --bodhi-list-rows: 5;
@@ -136,24 +138,48 @@
       padding: var(--bodhi-space-4);
       background: var(--bodhi-canvas);
       border-bottom: 1px solid var(--bodhi-line);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .header-bg-dots {
-      position: absolute;
-      top: 0;
-      right: 0;
-      opacity: 0.28;
-      pointer-events: none;
-      color: var(--bodhi-ink-faint);
     }
 
     .header-inner {
-      position: relative;
       display: flex;
       flex-direction: column;
       gap: var(--bodhi-space-2);
+    }
+
+    /* Styled tip — replaces native title chrome */
+    [data-bodhi-tip] {
+      position: relative;
+    }
+
+    [data-bodhi-tip]::after {
+      content: attr(data-bodhi-tip);
+      position: absolute;
+      /* Right of icon — stays inside overflow:hidden list shells */
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%) translateX(-4px);
+      padding: 5px 8px;
+      border-radius: var(--bodhi-radius);
+      background: var(--bodhi-ink);
+      color: var(--bodhi-surface);
+      box-shadow: var(--bodhi-shadow);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.25;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        opacity var(--bodhi-motion-fast) var(--bodhi-ease),
+        transform var(--bodhi-motion-fast) var(--bodhi-ease);
+      z-index: 40;
+    }
+
+    [data-bodhi-tip]:hover::after,
+    [data-bodhi-tip]:focus-visible::after {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
     }
 
     .header-logo-row {
@@ -214,7 +240,7 @@
     .section-header:focus-visible {
       outline: 2px solid var(--bodhi-accent);
       outline-offset: 2px;
-      border-radius: 6px;
+      border-radius: var(--bodhi-radius);
     }
 
     .section-header hr {
@@ -279,7 +305,7 @@
       justify-content: space-between;
       gap: var(--bodhi-space-3);
       padding: var(--bodhi-space-2) var(--bodhi-space-3);
-      border-radius: 10px;
+      border-radius: var(--bodhi-radius-shell);
       background: var(--bodhi-canvas);
       border: 1px solid var(--bodhi-line);
     }
@@ -303,7 +329,7 @@
       color: var(--bodhi-ink-soft);
       background: var(--bodhi-hover);
       border: 1px solid var(--bodhi-line);
-      border-radius: 6px;
+      border-radius: var(--bodhi-radius);
       padding: 3px 7px;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
@@ -311,8 +337,8 @@
 
     /*
       Scroll containment: bordered shell clips; inner scrollport owns overflow.
-      scrollbar-gutter: stable reserves thumb lane so list text never shifts
-      or sits under the bar when scrolling kicks in.
+      No stable gutter — thin overlay thumb only appears when content overflows,
+      so short lists stay balanced without a dead right strip.
     */
     .lookup-list-wrap {
       box-sizing: border-box;
@@ -320,7 +346,7 @@
       isolation: isolate;
       max-height: calc(var(--bodhi-row-h) * var(--bodhi-list-rows));
       border: 1px solid var(--bodhi-line);
-      border-radius: 12px;
+      border-radius: var(--bodhi-radius-shell);
       background: var(--bodhi-surface);
       overflow: hidden;
     }
@@ -331,14 +357,14 @@
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
-      scrollbar-gutter: stable;
+      scrollbar-gutter: auto;
     }
 
     .lookup-list {
       display: flex;
       flex-direction: column;
-      /* Keep row text clear of the reserved gutter */
-      padding-inline-end: 2px;
+      gap: 2px;
+      padding: var(--bodhi-space-1);
     }
 
     .lookup-item {
@@ -360,9 +386,9 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--bodhi-space-2);
-      min-height: var(--bodhi-row-h);
+      min-height: calc(var(--bodhi-row-h) - 4px);
       padding: 10px var(--bodhi-space-3);
-      padding-right: calc(var(--bodhi-space-3) + 2px);
+      border-radius: var(--bodhi-radius);
       border-left: 2px solid transparent;
       transition:
         background var(--bodhi-motion-fast) var(--bodhi-ease),
@@ -380,11 +406,23 @@
       border-left-color: var(--bodhi-accent);
     }
 
+    .lookup-item.active .lookup-item-inner {
+      border-radius: var(--bodhi-radius) var(--bodhi-radius) 0 0;
+    }
+
     .lookup-item-left {
       display: flex;
       align-items: center;
       gap: var(--bodhi-space-2);
       min-width: 0;
+    }
+
+    .lookup-item-left .method-tip {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--bodhi-radius);
     }
 
     .lookup-item-left .method-icon {
@@ -437,6 +475,8 @@
       grid-template-rows: 0fr;
       transition: grid-template-rows var(--bodhi-motion-base) var(--bodhi-ease);
       background: var(--bodhi-canvas);
+      border-radius: 0 0 var(--bodhi-radius) var(--bodhi-radius);
+      margin: 0 var(--bodhi-space-1);
     }
 
     .lookup-def > p {
@@ -572,7 +612,7 @@
     .theme-seg {
       display: flex;
       border: 1px solid var(--bodhi-line);
-      border-radius: 8px;
+      border-radius: var(--bodhi-radius);
       overflow: hidden;
       flex-shrink: 0;
       background: var(--bodhi-canvas);
@@ -616,7 +656,6 @@
 </head>
 <body class="bodhi-scroll">
   <header class="header">
-    <svg class="header-bg-dots" width="120" height="90" viewBox="0 0 120 90" aria-hidden="true"></svg>
     <div class="header-inner">
       <div class="header-logo-row">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">

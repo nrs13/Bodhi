@@ -121,13 +121,14 @@ function renderLookups() {
           stroke-linecap="round" stroke-linejoin="round"/>
       </svg>` : ''
 
+    const tip = source === 'search' ? 'Found via search' : 'Found via captions'
+
     html += `
       <button type="button" class="lookup-item${isExpanded ? ' active' : ''}${isKb ? ' kb-active' : ''}"
-        data-idx="${i}" role="option" aria-selected="${isKb || isExpanded}"
-        title="${source === 'search' ? 'Found via search' : 'Found via captions'}">
+        data-idx="${i}" role="option" aria-selected="${isKb || isExpanded}">
         <div class="lookup-item-inner">
           <div class="lookup-item-left">
-            ${icon}
+            <span class="method-tip" data-bodhi-tip="${tip}" aria-label="${tip}">${icon}</span>
             <span class="lookup-word">${escHtml(entry.word)}</span>
           </div>
           <div class="lookup-right">
@@ -350,17 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
       renderLookups()
     }
   })
-
-  const bgSvg = document.querySelector('.header-bg-dots')
-  if (bgSvg) {
-    let dots = ''
-    for (let row = 0; row < 7; row++) {
-      for (let col = 0; col < 9; col++) {
-        dots += `<circle cx="${col * 14 + 7}" cy="${row * 13 + 6}" r="1.2" fill="currentColor"/>`
-      }
-    }
-    bgSvg.innerHTML = dots
-  }
 
   chrome.storage.onChanged.addListener((changes) => {
     const historyChanged = Object.keys(changes).some(k => k.startsWith('bodhi_history_'))

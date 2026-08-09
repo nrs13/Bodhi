@@ -427,7 +427,7 @@ function methodBadgeHtml(source) {
   const isSearch = source === 'search'
   const title = isSearch ? 'Found via search' : 'Found via captions (⌘B)'
   const icon = isSearch ? searchIconSvg() : hotkeyIconSvg()
-  return `<span class="bodhi-method" title="${title}" aria-label="${title}">${icon}</span>`
+  return `<span class="bodhi-method" data-bodhi-tip="${title}" aria-label="${title}">${icon}</span>`
 }
 
 function toolbarHtml({ showHistory = false, showBack = false, title = '' } = {}) {
@@ -860,15 +860,16 @@ function buildHistoryView(history, currentWordId) {
       ? escHtml(definition)
       : '<span class="bodhi-history-def-missing">No definition saved for this word.</span>'
 
+    const tip = source === 'hotkey' ? 'Looked up via ⌘B' : 'Looked up via search'
+
     return `<div class="bodhi-history-row${isCurrent ? ' is-current' : ''}" data-history-idx="${i}">
       <button type="button" class="bodhi-history-entry${isCurrent ? ' is-current' : ''}"
         data-word="${escAttr(entry.word || '')}"
         data-pos="${escAttr(entry.pos || '')}"
         data-source="${source}"
-        aria-expanded="false"
-        title="${source === 'hotkey' ? 'Looked up via ⌘B' : 'Looked up via search'}">
+        aria-expanded="false">
         <span class="bodhi-history-entry-main">
-          ${icon}
+          <span class="bodhi-method-tip" data-bodhi-tip="${tip}" aria-label="${tip}">${icon}</span>
           <span class="bodhi-history-word${isCurrent ? ' is-current' : ''}">${escHtml(entry.word || '')}</span>
         </span>
         <span class="bodhi-history-entry-meta">

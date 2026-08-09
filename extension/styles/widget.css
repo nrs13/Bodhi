@@ -19,6 +19,43 @@
   display: block !important;
 }
 
+/* Tokenized tip — replaces native title chrome */
+.bodhi-widget [data-bodhi-tip] {
+  position: relative !important;
+}
+
+.bodhi-widget [data-bodhi-tip]::after {
+  content: attr(data-bodhi-tip) !important;
+  position: absolute !important;
+  /* Right of trigger — avoids clip by overflow:hidden shells */
+  left: calc(100% + 8px) !important;
+  top: 50% !important;
+  transform: translateY(-50%) translateX(-4px) !important;
+  padding: 5px 8px !important;
+  border-radius: var(--bodhi-radius) !important;
+  background: var(--bodhi-ink) !important;
+  color: var(--bodhi-surface) !important;
+  box-shadow: var(--bodhi-shadow) !important;
+  font-family: var(--bodhi-font) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition:
+    opacity var(--bodhi-motion-fast) var(--bodhi-ease),
+    transform var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  z-index: 50 !important;
+}
+
+.bodhi-widget [data-bodhi-tip]:hover::after,
+.bodhi-widget [data-bodhi-tip]:focus-visible::after {
+  opacity: 1 !important;
+  transform: translateY(-50%) translateX(0) !important;
+}
+
 .bodhi-widget {
   --bodhi-space-1: 4px;
   --bodhi-space-2: 8px;
@@ -41,6 +78,7 @@
   --bodhi-hover: #F1EBE4;
   --bodhi-scrim: rgba(255, 252, 250, 0.72);
   --bodhi-shadow: 0 8px 28px rgba(26, 23, 20, 0.10);
+  --bodhi-radius: 8px;
   --bodhi-scroll-size: 4px;
   --bodhi-scroll-thumb: rgba(138, 130, 120, 0.28);
   --bodhi-scroll-thumb-hover: rgba(138, 130, 120, 0.55);
@@ -246,7 +284,7 @@
   width: 24px !important;
   height: 24px !important;
   padding: 0 !important;
-  border-radius: 6px !important;
+  border-radius: var(--bodhi-radius) !important;
   color: var(--bodhi-ink-soft) !important;
   opacity: 1 !important;
   line-height: 0 !important;
@@ -313,7 +351,7 @@
   width: 32px !important;
   height: 32px !important;
   padding: 0 !important;
-  border-radius: 8px !important;
+  border-radius: var(--bodhi-radius) !important;
   transition: background-color var(--bodhi-motion-fast) var(--bodhi-ease), color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
   color: var(--bodhi-ink-soft) !important;
 }
@@ -357,7 +395,7 @@
   height: 22px !important;
   margin-top: 2px !important;
   color: var(--bodhi-caption) !important;
-  border-radius: 5px !important;
+  border-radius: var(--bodhi-radius) !important;
 }
 
 .bodhi-method:has(.bodhi-method-search),
@@ -373,6 +411,14 @@
 .bodhi-method svg,
 .bodhi-history-entry .bodhi-method-icon {
   color: inherit !important;
+}
+
+.bodhi-history-entry .bodhi-method-tip {
+  display: inline-flex !important;
+  flex-shrink: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--bodhi-radius) !important;
 }
 
 .bodhi-history-entry .bodhi-method-caption { color: var(--bodhi-caption) !important; }
@@ -514,7 +560,7 @@
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
-  scrollbar-gutter: stable !important;
+  scrollbar-gutter: auto !important;
   scrollbar-width: thin !important;
   scrollbar-color: var(--bodhi-scroll-thumb) transparent !important;
 }
@@ -573,7 +619,7 @@
   align-items: center !important;
   gap: var(--bodhi-space-2) !important;
   padding: var(--bodhi-space-2) !important;
-  border-radius: 8px !important;
+  border-radius: var(--bodhi-radius) !important;
   cursor: pointer !important;
   background: transparent !important;
   transition: background var(--bodhi-motion-fast) var(--bodhi-ease) !important;
@@ -664,7 +710,7 @@
   text-transform: uppercase !important;
 }
 
-/* Slim scroll — matches popup; gutter reserved so text never sits under thumb */
+/* Slim scroll — matches popup; no stable gutter (avoids dead strip when not overflowing) */
 .bodhi-history-list {
   margin-top: var(--bodhi-space-1) !important;
   max-height: 220px !important;
@@ -672,14 +718,14 @@
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
-  scrollbar-gutter: stable !important;
+  scrollbar-gutter: auto !important;
   scrollbar-width: thin !important;
   scrollbar-color: var(--bodhi-scroll-thumb) transparent !important;
   outline: none !important;
   display: flex !important;
   flex-direction: column !important;
   gap: var(--bodhi-space-1) !important;
-  padding-inline-end: 2px !important;
+  padding: 2px !important;
 }
 
 .bodhi-history-list::-webkit-scrollbar {
@@ -710,7 +756,7 @@
 .bodhi-history-row {
   display: flex !important;
   flex-direction: column !important;
-  border-radius: 8px !important;
+  border-radius: var(--bodhi-radius) !important;
   overflow: hidden !important;
 }
 
@@ -722,7 +768,7 @@
   width: 100% !important;
   min-height: 36px !important;
   padding: var(--bodhi-space-2) !important;
-  border-radius: 8px !important;
+  border-radius: var(--bodhi-radius) !important;
   cursor: pointer !important;
   transition: background var(--bodhi-motion-fast) var(--bodhi-ease), border-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
   border: none !important;
@@ -770,7 +816,7 @@
 
 .bodhi-history-row.is-expanded .bodhi-history-entry {
   background: var(--bodhi-hover) !important;
-  border-radius: 8px 8px 0 0 !important;
+  border-radius: var(--bodhi-radius) var(--bodhi-radius) 0 0 !important;
 }
 
 .bodhi-history-word {
