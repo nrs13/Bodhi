@@ -101,11 +101,13 @@ function cleanDefinition(text) {
   cleaned = cleaned.replace(/\{[a-z_]+\}/g, ' ')
 
   cleaned = cleaned.replace(/\[[^\]]*\]/g, ' ')
+  cleaned = cleaned.replace(/\|+/g, ' ')
+  cleaned = cleaned.replace(/\s+([.!?,;:])/g, '$1')
   cleaned = cleaned.replace(/\s+/g, ' ').trim()
   if (!cleaned) return null
 
   cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-  if (!/[.!?]$/.test(cleaned)) cleaned = `${cleaned}.` 
+  if (!/[.!?]$/.test(cleaned)) cleaned = `${cleaned}.`
 
   return cleaned
 }

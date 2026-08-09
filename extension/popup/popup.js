@@ -88,7 +88,11 @@ function escHtml(str = '') {
 }
 
 function cleanDefinition(str = '') {
-  return String(str).replace(/\s*\|\|+\s*$/g, '').trim()
+  return String(str)
+    .replace(/\|+/g, ' ')
+    .replace(/\s+([.!?,;:])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /** Nudge Chrome to recalculate popup window size after content toggles. */
@@ -172,6 +176,18 @@ function renderLookups() {
       expandedIdx = expandedIdx === idx ? null : idx
       renderLookups()
       scrollKbIntoView()
+    })
+    // Pointer stand matches ↑↓ — filled row, not the old left bar
+    btn.addEventListener('mouseenter', () => {
+      const idx = parseInt(btn.dataset.idx, 10)
+      if (Number.isNaN(idx) || idx === kbActiveIdx) return
+      kbActiveIdx = idx
+      lookupList.querySelectorAll('.lookup-item').forEach((el) => {
+        const i = parseInt(el.dataset.idx, 10)
+        const on = i === kbActiveIdx
+        el.classList.toggle('kb-active', on)
+        el.setAttribute('aria-selected', on || el.classList.contains('active') ? 'true' : 'false')
+      })
     })
   })
 

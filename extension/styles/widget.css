@@ -809,9 +809,11 @@
   padding: 8px var(--bodhi-space-2) !important;
   border-radius: var(--bodhi-radius) !important;
   cursor: pointer !important;
-  transition: background var(--bodhi-motion-fast) var(--bodhi-ease), border-color var(--bodhi-motion-fast) var(--bodhi-ease) !important;
-  border: none !important;
-  border-left: 2px solid transparent !important;
+  transition:
+    background var(--bodhi-motion-fast) var(--bodhi-ease),
+    border-color var(--bodhi-motion-fast) var(--bodhi-ease),
+    box-shadow var(--bodhi-motion-fast) var(--bodhi-ease) !important;
+  border: 1px solid transparent !important;
   background: transparent !important;
   color: var(--bodhi-ink) !important;
   -webkit-text-fill-color: var(--bodhi-ink) !important;
@@ -823,6 +825,7 @@
   opacity: 1 !important;
   visibility: visible !important;
   overflow: visible !important;
+  box-shadow: none !important;
 }
 
 .bodhi-history-entry-main {
@@ -840,29 +843,27 @@
   flex-shrink: 0 !important;
 }
 
-/* Hover only highlights — does not change view */
+/*
+  Standard listbox stand cue: full-row fill + soft outline.
+  Hover = light wash; keyboard/pointer stand = accent-soft (no left bar).
+*/
 .bodhi-history-entry:hover {
   background: var(--bodhi-hover) !important;
 }
 
 .bodhi-history-entry.is-kb-focus {
-  background: var(--bodhi-hover) !important;
-  border-left-color: var(--bodhi-accent) !important;
+  background: var(--bodhi-accent-soft) !important;
+  border-color: color-mix(in srgb, var(--bodhi-accent) 32%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bodhi-accent) 12%, transparent) !important;
   color: var(--bodhi-ink) !important;
 }
 
-.bodhi-history-entry.is-current {
-  border-left-color: var(--bodhi-line) !important;
-}
-
-.bodhi-history-entry.is-current.is-kb-focus,
 .bodhi-history-row.is-expanded .bodhi-history-entry {
-  border-left-color: var(--bodhi-accent) !important;
-}
-
-.bodhi-history-row.is-expanded .bodhi-history-entry {
-  background: var(--bodhi-hover) !important;
+  background: var(--bodhi-accent-soft) !important;
+  border-color: color-mix(in srgb, var(--bodhi-accent) 22%, transparent) !important;
+  border-bottom-color: transparent !important;
   border-radius: var(--bodhi-radius) var(--bodhi-radius) 0 0 !important;
+  box-shadow: none !important;
 }
 
 .bodhi-history-word {
@@ -890,6 +891,11 @@
 .bodhi-history-row.is-expanded .bodhi-history-word {
   color: var(--bodhi-ink) !important;
   -webkit-text-fill-color: var(--bodhi-ink) !important;
+}
+
+.bodhi-history-entry.is-kb-focus .bodhi-history-word,
+.bodhi-history-row.is-expanded .bodhi-history-word {
+  font-weight: 700 !important;
 }
 
 .bodhi-history-pos {
@@ -941,6 +947,10 @@
 .bodhi-history-row.is-expanded .bodhi-history-def {
   max-height: 280px !important;
   opacity: 1 !important;
+  border-left: 1px solid color-mix(in srgb, var(--bodhi-accent) 22%, transparent) !important;
+  border-right: 1px solid color-mix(in srgb, var(--bodhi-accent) 22%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--bodhi-accent) 22%, transparent) !important;
+  border-radius: 0 0 var(--bodhi-radius) var(--bodhi-radius) !important;
 }
 
 .bodhi-history-def > p {

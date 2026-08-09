@@ -297,7 +297,12 @@ let historyViewActive = false
 let lastTextWindow = null
 
 function cleanDefinition(str = '') {
-  return String(str).replace(/\s*\|\|+\s*$/g, '').trim()
+  return String(str)
+    // MW sense junk: "happy joy||." / trailing pipes before punctuation
+    .replace(/\|+/g, ' ')
+    .replace(/\s+([.!?,;:])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function escHtml(str = '') {
@@ -680,6 +685,14 @@ function bindHistoryListInteractions(widget, historyList) {
   if (historyList.dataset.bound === '1') return
   historyList.dataset.bound = '1'
 
+  let activeHistoryIdx = -1
+
+  const standOn = (idx) => {
+    if (idx < 0) return
+    activeHistoryIdx = idx
+    setHistoryKeyboardFocus(historyList, idx)
+  }
+
   historyList.addEventListener('click', (e) => {
     const entry = e.target.closest?.('.bodhi-history-entry')
       || e.target.closest?.('.bodhi-history-row')?.querySelector?.('.bodhi-history-entry')
@@ -689,13 +702,21 @@ function bindHistoryListInteractions(widget, historyList) {
     pauseAutoDismiss()
     const row = entry.closest('.bodhi-history-row')
     if (!row) return
-    toggleHistoryRowExpand(row, historyList)
     const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
     const idx = rows.indexOf(row)
-    if (idx >= 0) setHistoryKeyboardFocus(historyList, idx)
+    if (idx >= 0) standOn(idx)
+    toggleHistoryRowExpand(row, historyList)
   }, true)
 
-  let activeHistoryIdx = -1
+  // Pointer stand = same cue as ↑↓ (standard listbox “where am I”)
+  historyList.addEventListener('pointerover', (e) => {
+    const entry = e.target.closest?.('.bodhi-history-entry')
+    if (!entry || !historyList.contains(entry)) return
+    const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
+    const idx = rows.indexOf(entry.closest('.bodhi-history-row'))
+    if (idx >= 0 && idx !== activeHistoryIdx) standOn(idx)
+  })
+
   historyList.addEventListener('keydown', (e) => {
     const rows = Array.from(historyList.querySelectorAll('.bodhi-history-row'))
     if (!rows.length) return
@@ -703,13 +724,11 @@ function bindHistoryListInteractions(widget, historyList) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       e.stopPropagation()
-      activeHistoryIdx = Math.min(activeHistoryIdx + 1, rows.length - 1)
-      setHistoryKeyboardFocus(historyList, activeHistoryIdx)
+      standOn(Math.min(activeHistoryIdx + 1, rows.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       e.stopPropagation()
-      activeHistoryIdx = Math.max(activeHistoryIdx - 1, 0)
-      setHistoryKeyboardFocus(historyList, activeHistoryIdx)
+      standOn(activeHistoryIdx < 0 ? rows.length - 1 : Math.max(activeHistoryIdx - 1, 0))
     } else if (e.key === 'Enter' && activeHistoryIdx >= 0) {
       e.preventDefault()
       e.stopPropagation()
